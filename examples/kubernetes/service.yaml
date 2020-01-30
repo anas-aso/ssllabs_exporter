@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: ssllabs-exporter
+  labels:
+    app: ssllabs-exporter
+spec:
+  ports:
+    - name: http
+      port: 80
+      protocol: TCP
+      targetPort: 19115
+  selector:
+    app: ssllabs-exporter
+  type: ClusterIP
