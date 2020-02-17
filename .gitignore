@@ -10,5 +10,7 @@
 # Unignore Dockerfile
 !Dockerfile
 
+!LICENSE
+
 # OS X garbage
 .DS_Store
