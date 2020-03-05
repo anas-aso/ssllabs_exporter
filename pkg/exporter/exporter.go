@@ -16,7 +16,6 @@ package exporter
 
 import (
 	"context"
-	"strings"
 	"time"
 
 	"github.com/anas-aso/ssllabs_exporter/pkg/ssllabs"
@@ -65,27 +64,10 @@ func Handle(ctx context.Context, logger log.Logger, target string) prometheus.Ga
 		probeAgeGauge.Set(float64(time.Now().Unix()))
 	} else {
 		probeSuccessGauge.Set(1)
-		probeGauge.Set(aggregateGrade(result.Endpoints))
+		probeGauge.Set(float64(endpointsLowestGradeValue(result.Endpoints)))
 		// TestTime is in milliseconds
 		probeAgeGauge.Set(float64(result.TestTime / 1000))
 	}
 
 	return registry
-}
-
-// returns 1 if the target SSLLabs grade is A (or A+), 0 if not
-func aggregateGrade(ep []ssllabs.Endpoint) float64 {
-	// make sure the assessment result has endpoints
-	if len(ep) == 0 {
-		return 0
-	}
-
-	// the target host gets the lowest score of its endpoints
-	for _, e := range ep {
-		if !strings.HasPrefix(e.Grade, "A") {
-			return 0
-		}
-	}
-
-	return 1
 }
