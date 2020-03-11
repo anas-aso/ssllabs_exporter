@@ -20,16 +20,16 @@ import (
 	"github.com/anas-aso/ssllabs_exporter/pkg/ssllabs"
 )
 
-func TestEndpointsLowestGradeValue(t *testing.T) {
+func TestEndpointsLowestGrade(t *testing.T) {
 	var cases = []struct {
 		name           string
 		data           []ssllabs.Endpoint
-		expectedResult int
+		expectedResult string
 	}{
 		{
 			name:           "result_without_endpoints",
 			data:           []ssllabs.Endpoint{},
-			expectedResult: 0,
+			expectedResult: "",
 		},
 		{
 			name: "single_grade",
@@ -38,7 +38,7 @@ func TestEndpointsLowestGradeValue(t *testing.T) {
 					Grade: "A+",
 				},
 			},
-			expectedResult: gradesMapping["A+"],
+			expectedResult: "A+",
 		},
 		{
 			name: "multiple_grades",
@@ -53,7 +53,7 @@ func TestEndpointsLowestGradeValue(t *testing.T) {
 					Grade: "A+",
 				},
 			},
-			expectedResult: gradesMapping["B"],
+			expectedResult: "B",
 		},
 		{
 			name: "unknown_grade",
@@ -68,12 +68,12 @@ func TestEndpointsLowestGradeValue(t *testing.T) {
 					Grade: "X",
 				},
 			},
-			expectedResult: -1,
+			expectedResult: "undef",
 		},
 	}
 
 	for _, c := range cases {
-		grade := endpointsLowestGradeValue(c.data)
+		grade := endpointsLowestGrade(c.data)
 		if grade != c.expectedResult {
 			t.Errorf("Test case : %v failed.\nExpected : %v\nGot : %v\n", c.name, c.expectedResult, grade)
 		}
