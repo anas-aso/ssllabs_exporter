@@ -44,3 +44,16 @@ Once deployed, Prometheus Targets view page should look like this :
 
 The Grafana dashboard below is available [here](examples/grafana_dashboard.json).
 ![grafana-dashboard](https://i.imgur.com/q71BpOa.png "Grafana Dashboard")
+
+## Available metrics
+| Metric Name | Description |
+|----|-----------|
+| ssllabs_probe_duration_seconds | how long the assessment took in seconds |
+| ssllabs_probe_success | whether we were able to fetch an assessment result from SSLLabs API (value of 1) or not (value of 0) regardless of the result content |
+| ssllabs_grade | the grade of the target host |
+| ssllabs_grade_age_seconds | when the result was generated in Unix time |
+
+#### `ssllabs_grade` possible values:
+  - `1` : Assessment was successful and the grade is exposed in the `grade` label of the metric.
+  - `0` : Target host doesn't have any endpoint (list of returned [endpoints](https://github.com/ssllabs/ssllabs-scan/blob/master/ssllabs-api-docs-v3.md#host) is empty).
+  - `-1` : Error while processing the assessment (e.g rate limiting from SSLLabs API side).

@@ -19,6 +19,8 @@ jobs:
       with:
         path: ~/go/pkg/mod
         key: go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          go-
     - name: Download dependencies
       run: go mod download
     - name: Test

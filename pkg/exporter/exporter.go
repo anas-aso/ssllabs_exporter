@@ -16,7 +16,6 @@ package exporter
 
 import (
 	"context"
-	"strings"
 	"time"
 
 	"github.com/anas-aso/ssllabs_exporter/pkg/ssllabs"
@@ -39,10 +38,10 @@ func Handle(ctx context.Context, logger log.Logger, target string) prometheus.Ga
 			Help: "Displays whether the assessment succeeded or not",
 		})
 
-		probeGauge = prometheus.NewGauge(prometheus.GaugeOpts{
+		probeGaugeVec = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "ssllabs_grade",
 			Help: "Displays the returned SSLLabs grade of the target host",
-		})
+		}, []string{"grade"})
 		probeAgeGauge = prometheus.NewGauge(prometheus.GaugeOpts{
 			Name: "ssllabs_grade_age_seconds",
 			Help: "Displays the assessment time for the target host",
@@ -51,7 +50,7 @@ func Handle(ctx context.Context, logger log.Logger, target string) prometheus.Ga
 
 	registry.MustRegister(probeDurationGauge)
 	registry.MustRegister(probeSuccessGauge)
-	registry.MustRegister(probeGauge)
+	registry.MustRegister(probeGaugeVec)
 	registry.MustRegister(probeAgeGauge)
 
 	start := time.Now()
@@ -63,29 +62,28 @@ func Handle(ctx context.Context, logger log.Logger, target string) prometheus.Ga
 		level.Error(logger).Log("msg", "assessment failed", "target", target, "error", err)
 		// set the probe date to now if the assessment failed
 		probeAgeGauge.Set(float64(time.Now().Unix()))
-	} else {
-		probeSuccessGauge.Set(1)
-		probeGauge.Set(aggregateGrade(result.Endpoints))
+		// set grade to -1 if the assessment failed
+		probeGaugeVec.WithLabelValues("-").Set(-1)
+
+		return registry
+	}
+
+	probeSuccessGauge.Set(1)
+
+	grade := endpointsLowestGrade(result.Endpoints)
+
+	if grade != "" {
+		probeGaugeVec.WithLabelValues(grade).Set(1)
+
 		// TestTime is in milliseconds
 		probeAgeGauge.Set(float64(result.TestTime / 1000))
+	} else {
+		// set grade to 0 if the target does not have an endpoint
+		probeGaugeVec.WithLabelValues("-").Set(0)
+
+		// set the probe date to now if the result does not have a grade
+		probeAgeGauge.Set(float64(time.Now().Unix()))
 	}
 
 	return registry
-}
-
-// returns 1 if the target SSLLabs grade is A (or A+), 0 if not
-func aggregateGrade(ep []ssllabs.Endpoint) float64 {
-	// make sure the assessment result has endpoints
-	if len(ep) == 0 {
-		return 0
-	}
-
-	// the target host gets the lowest score of its endpoints
-	for _, e := range ep {
-		if !strings.HasPrefix(e.Grade, "A") {
-			return 0
-		}
-	}
-
-	return 1
 }

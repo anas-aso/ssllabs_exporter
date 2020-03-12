@@ -20,71 +20,60 @@ import (
 	"github.com/anas-aso/ssllabs_exporter/pkg/ssllabs"
 )
 
-func TestAggregateGrade(t *testing.T) {
+func TestEndpointsLowestGrade(t *testing.T) {
 	var cases = []struct {
 		name           string
-		data           ssllabs.Result
-		expectedResult float64
+		data           []ssllabs.Endpoint
+		expectedResult string
 	}{
 		{
 			name:           "result_without_endpoints",
-			data:           ssllabs.Result{},
-			expectedResult: 0,
+			data:           []ssllabs.Endpoint{},
+			expectedResult: "",
 		},
 		{
-			name: "a_plus_grade",
-			data: ssllabs.Result{
-				Endpoints: []ssllabs.Endpoint{
-					{
-						Grade: "A+",
-					},
+			name: "single_grade",
+			data: []ssllabs.Endpoint{
+				{
+					Grade: "A+",
 				},
 			},
-			expectedResult: 1,
+			expectedResult: "A+",
 		},
 		{
-			name: "a_grade",
-			data: ssllabs.Result{
-				Endpoints: []ssllabs.Endpoint{
-					{
-						Grade: "A",
-					},
+			name: "multiple_grades",
+			data: []ssllabs.Endpoint{
+				{
+					Grade: "B",
+				},
+				{
+					Grade: "A",
+				},
+				{
+					Grade: "A+",
 				},
 			},
-			expectedResult: 1,
+			expectedResult: "B",
 		},
 		{
-			name: "non_a_grade",
-			data: ssllabs.Result{
-				Endpoints: []ssllabs.Endpoint{
-					{
-						Grade: "B",
-					},
+			name: "unknown_grade",
+			data: []ssllabs.Endpoint{
+				{
+					Grade: "B",
+				},
+				{
+					Grade: "A",
+				},
+				{
+					Grade: "X",
 				},
 			},
-			expectedResult: 0,
-		},
-		{
-			name: "single_failing_endpoint",
-			data: ssllabs.Result{
-				Endpoints: []ssllabs.Endpoint{
-					{
-						Grade: "B",
-					},
-					{
-						Grade: "A",
-					},
-					{
-						Grade: "A+",
-					},
-				},
-			},
-			expectedResult: 0,
+			expectedResult: "undef",
 		},
 	}
 
 	for _, c := range cases {
-		grade := aggregateGrade(c.data.Endpoints)
+		grade := endpointsLowestGrade(c.data)
 		if grade != c.expectedResult {
 			t.Errorf("Test case : %v failed.\nExpected : %v\nGot : %v\n", c.name, c.expectedResult, grade)
 		}
