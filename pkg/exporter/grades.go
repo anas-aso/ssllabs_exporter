@@ -23,25 +23,32 @@ var gradesMapping = map[string]float64{
 }
 
 // convert the returned grade to a number based on https://github.com/ssllabs/research/wiki/SSL-Server-Rating-Guide
-func endpointsLowestGrade(ep []ssllabs.Endpoint) string {
+func endpointsLowestGrade(ep []ssllabs.Endpoint) (result string) {
 	if len(ep) == 0 {
-		return ""
+		return
 	}
-
-	// initialize the returned grade to the highest possible value
-	grade := "A+"
 
 	// the target host gets the lowest score of its endpoints
 	for _, e := range ep {
+		// skip endpoints without a grade : case of unreachable endpoint(s)
+		if e.Grade == "" {
+			continue
+		}
+
+		// initialize the result with the first defined grade
+		if result == "" {
+			result = e.Grade
+		}
+
 		eGrade, ok := gradesMapping[e.Grade]
 		if ok {
-			if gradesMapping[grade] > eGrade {
-				grade = e.Grade
+			if gradesMapping[result] > eGrade {
+				result = e.Grade
 			}
 		} else {
 			return "undef"
 		}
 	}
 
-	return grade
+	return
 }
