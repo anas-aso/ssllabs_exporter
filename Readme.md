@@ -43,7 +43,7 @@ Once deployed, Prometheus Targets view page should look like this :
 ![prometheus-targets-view](https://i.imgur.com/fJCun72.png "Prometheus Targets View")
 
 The Grafana dashboard below is available [here](examples/grafana_dashboard.json).
-![grafana-dashboard](https://i.imgur.com/q71BpOa.png "Grafana Dashboard")
+![grafana-dashboard](https://i.imgur.com/T00RtYk.png "Grafana Dashboard")
 
 ## Available metrics
 | Metric Name | Description |
