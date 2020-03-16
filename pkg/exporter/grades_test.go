@@ -32,6 +32,32 @@ func TestEndpointsLowestGrade(t *testing.T) {
 			expectedResult: "",
 		},
 		{
+			name: "result_with_unreachable_endpoint(s)",
+			data: []ssllabs.Endpoint{
+				{
+					StatusMessage: "Unable to connect to the server",
+					Grade:         "",
+				},
+			},
+			expectedResult: "",
+		},
+		{
+			name: "result_with_single_unreachable_endpoint",
+			data: []ssllabs.Endpoint{
+				{
+					StatusMessage: "Unable to connect to the server",
+					Grade:         "",
+				},
+				{
+					Grade: "A",
+				},
+				{
+					Grade: "B",
+				},
+			},
+			expectedResult: "B",
+		},
+		{
 			name: "single_grade",
 			data: []ssllabs.Endpoint{
 				{
