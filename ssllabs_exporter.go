@@ -18,22 +18,31 @@ import (
 	"context"
 	"net/http"
 	"os"
+	"runtime"
 	"strconv"
 	"time"
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/anas-aso/ssllabs_exporter/pkg/exporter"
+	"github.com/anas-aso/ssllabs_exporter/pkg/ssllabs"
 )
 
 var (
 	listenAddress = kingpin.Flag("listen-address", "The address to listen on for HTTP requests.").Default(":19115").String()
 	probeTimeout  = kingpin.Flag("timeout", "Assessment timeout in seconds (including retries).").Default("600").Float64()
 	logLevel      = kingpin.Flag("log-level", "Printed logs level.").Default("debug").Enum("error", "warn", "info", "debug")
-	version       string
+
+	// build parameters
+	branch    string
+	goversion = runtime.Version()
+	revision  string
+	version   string
 )
 
 func probeHandler(w http.ResponseWriter, r *http.Request, logger log.Logger, timeoutSeconds float64) {
@@ -92,7 +101,38 @@ func main() {
 
 	level.Info(logger).Log("msg", "Starting ssllabs_exporter", "version", version)
 
-	// TODO: expose SSLLabs API info (ssllabs.Info())
+	promauto.NewGaugeFunc(
+		prometheus.GaugeOpts{
+			Name: "ssllabs_exporter",
+			Help: "SSLLabs exporter build parameters",
+			ConstLabels: prometheus.Labels{
+				"branch":    branch,
+				"goversion": goversion,
+				"revision":  revision,
+				"version":   version,
+			},
+		},
+		func() float64 { return 1 },
+	)
+
+	ssllabsInfo, err := ssllabs.Info()
+	if err != nil {
+		level.Error(logger).Log("msg", "Could not fetch SSLLabs API Info.", "err", err)
+		os.Exit(1)
+	}
+
+	promauto.NewGaugeFunc(
+		prometheus.GaugeOpts{
+			Name: "ssllabs_api",
+			Help: "SSLLabs API engine and criteria versions",
+			ConstLabels: prometheus.Labels{
+				"engine":   ssllabsInfo.EngineVersion,
+				"criteria": ssllabsInfo.EngineVersion,
+			},
+		},
+		func() float64 { return 1 },
+	)
+
 	http.Handle("/metrics", promhttp.Handler())
 	http.HandleFunc("/probe", func(w http.ResponseWriter, r *http.Request) {
 		probeHandler(w, r, logger, timeoutSeconds)
