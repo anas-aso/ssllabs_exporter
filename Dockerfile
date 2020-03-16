@@ -12,11 +12,17 @@ RUN go mod download
 
 COPY . /workdir/
 
-# Set the version to the tag, otherwise use the commit hash
-RUN git describe --exact-match --tags HEAD > version || git rev-parse HEAD > version && cat version
+# Generate build parameters
+RUN git describe --exact-match --tags HEAD > version || true
+RUN git rev-parse HEAD > revision
+RUN git rev-parse --abbrev-ref HEAD > branch
 
 RUN export VERSION=$(cat version) && \
-    CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo -ldflags="-w -s -X main.version=${VERSION}" -o /workdir/ssllabs_exporter
+    export BRANCH=$(cat branch) && \
+    export REVISION=$(cat revision) && \
+    CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo \
+    -ldflags="-w -s -X main.branch=${BRANCH} -X main.revision=${REVISION} -X main.version=${VERSION}" \
+    -o /workdir/ssllabs_exporter
 
 # Create a "nobody" user for the next image
 RUN echo "nobody:x:65534:65534:Nobody:/:" > /etc_passwd
