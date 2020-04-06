@@ -42,8 +42,8 @@ func Handle(ctx context.Context, logger log.Logger, target string) prometheus.Ga
 			Name: "ssllabs_grade",
 			Help: "Displays the returned SSLLabs grade of the target host",
 		}, []string{"grade"})
-		probeAgeGauge = prometheus.NewGauge(prometheus.GaugeOpts{
-			Name: "ssllabs_grade_age_seconds",
+		probeTimeGauge = prometheus.NewGauge(prometheus.GaugeOpts{
+			Name: "ssllabs_grade_time_seconds",
 			Help: "Displays the assessment time for the target host",
 		})
 	)
@@ -51,17 +51,17 @@ func Handle(ctx context.Context, logger log.Logger, target string) prometheus.Ga
 	registry.MustRegister(probeDurationGauge)
 	registry.MustRegister(probeSuccessGauge)
 	registry.MustRegister(probeGaugeVec)
-	registry.MustRegister(probeAgeGauge)
+	registry.MustRegister(probeTimeGauge)
 
 	start := time.Now()
+	probeTimeGauge.Set(float64(start.Unix()))
+
 	result, err := ssllabs.Analyze(ctx, logger, target)
 
 	probeDurationGauge.Set(time.Since(start).Seconds())
 
 	if err != nil {
 		level.Error(logger).Log("msg", "assessment failed", "target", target, "error", err)
-		// set the probe date to now if the assessment failed
-		probeAgeGauge.Set(float64(time.Now().Unix()))
 		// set grade to -1 if the assessment failed
 		probeGaugeVec.WithLabelValues("-").Set(-1)
 
@@ -74,15 +74,9 @@ func Handle(ctx context.Context, logger log.Logger, target string) prometheus.Ga
 
 	if grade != "" {
 		probeGaugeVec.WithLabelValues(grade).Set(1)
-
-		// TestTime is in milliseconds
-		probeAgeGauge.Set(float64(result.TestTime / 1000))
 	} else {
 		// set grade to 0 if the target does not have an endpoint
 		probeGaugeVec.WithLabelValues("-").Set(0)
-
-		// set the probe date to now if the result does not have a grade
-		probeAgeGauge.Set(float64(time.Now().Unix()))
 	}
 
 	return registry
