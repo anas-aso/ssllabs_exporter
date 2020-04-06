@@ -54,14 +54,14 @@ func Handle(ctx context.Context, logger log.Logger, target string) prometheus.Ga
 	registry.MustRegister(probeAgeGauge)
 
 	start := time.Now()
+	probeAgeGauge.Set(float64(start.Unix()))
+
 	result, err := ssllabs.Analyze(ctx, logger, target)
 
 	probeDurationGauge.Set(time.Since(start).Seconds())
 
 	if err != nil {
 		level.Error(logger).Log("msg", "assessment failed", "target", target, "error", err)
-		// set the probe date to now if the assessment failed
-		probeAgeGauge.Set(float64(time.Now().Unix()))
 		// set grade to -1 if the assessment failed
 		probeGaugeVec.WithLabelValues("-").Set(-1)
 
@@ -74,15 +74,9 @@ func Handle(ctx context.Context, logger log.Logger, target string) prometheus.Ga
 
 	if grade != "" {
 		probeGaugeVec.WithLabelValues(grade).Set(1)
-
-		// TestTime is in milliseconds
-		probeAgeGauge.Set(float64(result.TestTime / 1000))
 	} else {
 		// set grade to 0 if the target does not have an endpoint
 		probeGaugeVec.WithLabelValues("-").Set(0)
-
-		// set the probe date to now if the result does not have a grade
-		probeAgeGauge.Set(float64(time.Now().Unix()))
 	}
 
 	return registry
