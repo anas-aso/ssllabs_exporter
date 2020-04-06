@@ -42,8 +42,8 @@ func Handle(ctx context.Context, logger log.Logger, target string) prometheus.Ga
 			Name: "ssllabs_grade",
 			Help: "Displays the returned SSLLabs grade of the target host",
 		}, []string{"grade"})
-		probeAgeGauge = prometheus.NewGauge(prometheus.GaugeOpts{
-			Name: "ssllabs_grade_age_seconds",
+		probeTimeGauge = prometheus.NewGauge(prometheus.GaugeOpts{
+			Name: "ssllabs_grade_time_seconds",
 			Help: "Displays the assessment time for the target host",
 		})
 	)
@@ -51,10 +51,10 @@ func Handle(ctx context.Context, logger log.Logger, target string) prometheus.Ga
 	registry.MustRegister(probeDurationGauge)
 	registry.MustRegister(probeSuccessGauge)
 	registry.MustRegister(probeGaugeVec)
-	registry.MustRegister(probeAgeGauge)
+	registry.MustRegister(probeTimeGauge)
 
 	start := time.Now()
-	probeAgeGauge.Set(float64(start.Unix()))
+	probeTimeGauge.Set(float64(start.Unix()))
 
 	result, err := ssllabs.Analyze(ctx, logger, target)
 
