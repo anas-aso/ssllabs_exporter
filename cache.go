@@ -23,8 +23,8 @@ import (
 )
 
 type cacheEntry struct {
-	id           string
-	creationTime int64
+	id         string
+	expiryTime int64
 }
 
 type cache struct {
@@ -40,8 +40,8 @@ func (c *cache) add(id string, result *prometheus.Gatherer) {
 	defer c.mu.Unlock()
 
 	entry := &cacheEntry{
-		id:           id,
-		creationTime: time.Now().Unix(),
+		id:         id,
+		expiryTime: int64(c.retention.Seconds()) + time.Now().Unix(),
 	}
 
 	c.entries[id] = result
@@ -68,9 +68,8 @@ func (c *cache) prune() {
 
 	for e != nil {
 		entry := e.Value.(*cacheEntry)
-		expiryTime := entry.creationTime + int64(c.retention.Seconds())
 
-		if expiryTime > time.Now().Unix() {
+		if entry.expiryTime > time.Now().Unix() {
 			break
 		}
 
