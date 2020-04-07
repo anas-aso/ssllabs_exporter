@@ -34,10 +34,10 @@ func TestCacheOperations(t *testing.T) {
 		t.Errorf("Cached registry contains wrong metric name.\nExpected : %v\nGot : %v\n", "metric", mfs[0].GetName())
 	}
 
-	// wait for the prune delay to expire
+	// wait for the cache to expire
 	time.Sleep(pruneDelay + retention)
 
-	// check the cache expiry
+	// check the cache staleness
 	entry = cache.get("testDomain")
 	if entry != nil {
 		t.Errorf("Cache contains stale data.\nFound entry : %v\n", entry)
