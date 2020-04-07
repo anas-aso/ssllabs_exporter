@@ -22,6 +22,7 @@ import (
 )
 
 func TestCacheOperations(t *testing.T) {
+	// TODO: split the tests per function
 	pruneDelay := 1 * time.Second
 	retention := 2 * time.Second
 
@@ -60,5 +61,17 @@ func TestCacheOperations(t *testing.T) {
 	// check the cache content
 	if cache.lru.Len() != 0 || len(cache.entries) != 0 {
 		t.Errorf("Cache contains unexpected data.\nFound entry(ies) : %v\n", cache.entries)
+	}
+
+	// add the entry element twice
+	cache.add("testDomain", &garether)
+	cache.add("testDomain", &garether)
+	// check the cache content
+	if cache.lru.Len() != 1 || len(cache.entries) != 1 {
+		var dupEntries []cacheEntry
+		for e := cache.lru.Front(); e != nil; e = e.Next() {
+			dupEntries = append(dupEntries, *e.Value.(*cacheEntry))
+		}
+		t.Errorf("Cache contains duplicate entries.\nFound entry(ies) : %v\n", dupEntries)
 	}
 }

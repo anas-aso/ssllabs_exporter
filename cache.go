@@ -44,8 +44,21 @@ func (c *cache) add(id string, result *prometheus.Gatherer) {
 		expiryTime: int64(c.retention.Seconds()) + time.Now().Unix(),
 	}
 
-	c.entries[id] = result
+	_, alreadyExists := c.entries[id]
+	if alreadyExists {
+		e := c.lru.Front()
+		for e != nil {
+			entry := e.Value.(*cacheEntry)
+			if entry.id == id {
+				c.lru.Remove(e)
+				break
+			}
+			e = e.Next()
+		}
+	}
+
 	c.lru.PushBack(entry)
+	c.entries[id] = result
 }
 
 func (c *cache) get(id string) prometheus.Gatherer {
