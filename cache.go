@@ -25,12 +25,11 @@ import (
 type cacheEntry struct {
 	id           string
 	creationTime int64
-	result       *prometheus.Gatherer
 }
 
 type cache struct {
 	mu         sync.Mutex
-	entries    map[string]*cacheEntry
+	entries    map[string]*prometheus.Gatherer
 	lru        *list.List
 	retention  time.Duration
 	pruneDelay time.Duration
@@ -43,20 +42,19 @@ func (c *cache) add(id string, result *prometheus.Gatherer) {
 	entry := &cacheEntry{
 		id:           id,
 		creationTime: time.Now().Unix(),
-		result:       result,
 	}
 
-	c.entries[id] = entry
+	c.entries[id] = result
 	c.lru.PushBack(entry)
 }
 
-func (c *cache) get(id string) (result *cacheEntry) {
+func (c *cache) get(id string) prometheus.Gatherer {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
 	result, found := c.entries[id]
 	if found {
-		return result
+		return *result
 	}
 
 	return nil
@@ -93,7 +91,7 @@ func (c *cache) start() {
 
 func newCache(pruneDelay, retention time.Duration) *cache {
 	c := &cache{
-		entries:    make(map[string]*cacheEntry),
+		entries:    make(map[string]*prometheus.Gatherer),
 		lru:        list.New(),
 		retention:  retention,
 		pruneDelay: pruneDelay,

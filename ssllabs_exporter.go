@@ -65,13 +65,10 @@ func probeHandler(w http.ResponseWriter, r *http.Request, logger log.Logger, tim
 	defer cancel()
 	r = r.WithContext(ctx)
 
-	var registry prometheus.Gatherer
+	registry := resultsCache.get(target)
 
-	c := resultsCache.get(target)
-
-	if c != nil {
+	if registry != nil {
 		level.Debug(logger).Log("msg", "serving results from cache", "target", target)
-		registry = *c.result
 	} else {
 		registry = exporter.Handle(ctx, logger, target)
 		resultsCache.add(target, &registry)

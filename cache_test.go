@@ -24,7 +24,7 @@ func TestCacheOperations(t *testing.T) {
 	cache.add("testDomain", &garether)
 
 	entry := cache.get("testDomain")
-	mfs, _ := (*entry.result).Gather()
+	mfs, _ := entry.Gather()
 
 	// check the content of the cached registry
 	if len(mfs) != 1 {
