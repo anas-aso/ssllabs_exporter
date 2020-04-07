@@ -39,7 +39,7 @@ const (
 
 var (
 	listenAddress  = kingpin.Flag("listen-address", "The address to listen on for HTTP requests.").Default(":19115").String()
-	probeTimeout   = kingpin.Flag("timeout", "Assessment timeout in seconds (including retries).").Default("600").Float64()
+	probeTimeout   = kingpin.Flag("timeout", "Time duration before canceling an ongoing probe such as 30m or 1h5m. Valid duration units are ns, us (or µs), ms, s, m, h.").Default("5m").String()
 	logLevel       = kingpin.Flag("log-level", "Printed logs level.").Default("debug").Enum("error", "warn", "info", "debug")
 	cacheRetention = kingpin.Flag("cache-retention", "Time duration to keep entries in cache such as 30m or 1h5m. Valid duration units are ns, us (or µs), ms, s, m, h.").Default("5m").String()
 
@@ -50,7 +50,7 @@ var (
 	version   string
 )
 
-func probeHandler(w http.ResponseWriter, r *http.Request, logger log.Logger, timeoutSeconds float64, resultsCache *cache) {
+func probeHandler(w http.ResponseWriter, r *http.Request, logger log.Logger, timeoutSeconds time.Duration, resultsCache *cache) {
 	params := r.URL.Query()
 	target := params.Get("target")
 	if target == "" {
@@ -60,11 +60,9 @@ func probeHandler(w http.ResponseWriter, r *http.Request, logger log.Logger, tim
 		return
 	}
 
-	if t, ok := scrapeTimeoutExists(r); ok {
-		timeoutSeconds = t * float64(time.Second)
-	}
+	timeoutSeconds = getTimeout(r, timeoutSeconds)
 
-	ctx, cancel := context.WithTimeout(r.Context(), time.Duration(timeoutSeconds))
+	ctx, cancel := context.WithTimeout(r.Context(), timeoutSeconds)
 	defer cancel()
 	r = r.WithContext(ctx)
 
@@ -103,12 +101,16 @@ func main() {
 	logger = level.NewFilter(logger, lvl)
 	logger = log.With(logger, "timestamp", log.DefaultTimestampUTC)
 
-	timeoutSeconds := *probeTimeout * float64(time.Second)
+	timeoutSeconds, err := time.ParseDuration(*probeTimeout)
+	if err != nil {
+		level.Error(logger).Log("msg", "failed to parse the probe timeout value", "err", err)
+		os.Exit(1)
+	}
 	// A new assessment will always take at least 60 seconds per host
 	// endpoint. A timeout less than 60 seconds doesn't make sense.
-	if timeoutSeconds < float64(60*time.Second) {
-		level.Warn(logger).Log("msg", "configured timeout is less than 60 seconds. switching to default timeout")
-		timeoutSeconds = float64(600 * time.Second)
+	if timeoutSeconds < 1*time.Minute {
+		level.Warn(logger).Log("msg", "configured timeout is less than 1 minute. Switching to default timeout (5m)")
+		timeoutSeconds = 5 * time.Minute
 	}
 
 	cacheRetentionInput, err := time.ParseDuration(*cacheRetention)
@@ -175,14 +177,20 @@ func main() {
 	}
 }
 
-// get scrape timeout value if defined
-func scrapeTimeoutExists(r *http.Request) (float64, bool) {
+// get the min of Prometheus scrape timeout (if found) and the flag timeout
+func getTimeout(r *http.Request, timeout time.Duration) time.Duration {
 	if v := r.Header.Get("X-Prometheus-Scrape-Timeout-Seconds"); v != "" {
-		timeoutSeconds, err := strconv.ParseFloat(v, 64)
+		scrapeTimeout, err := strconv.ParseFloat(v, 64)
 		if err != nil {
-			return 0, false
+			return timeout
 		}
-		return timeoutSeconds, true
+
+		scrapeTimeoutSeconds := time.Duration(scrapeTimeout) * time.Second
+
+		if scrapeTimeoutSeconds < timeout {
+			return scrapeTimeoutSeconds
+		}
 	}
-	return 0, false
+
+	return timeout
 }
