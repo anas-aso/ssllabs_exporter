@@ -48,16 +48,16 @@ func (c *cache) add(id string, result *prometheus.Gatherer) {
 	if alreadyExists {
 		e := c.lru.Front()
 		for e != nil {
-			entry := e.Value.(*cacheEntry)
-			if entry.id == id {
-				c.lru.Remove(e)
+			if e.Value.(*cacheEntry).id == id {
+				c.lru.MoveToBack(e)
 				break
 			}
 			e = e.Next()
 		}
+	} else {
+		c.lru.PushBack(entry)
 	}
 
-	c.lru.PushBack(entry)
 	c.entries[id] = result
 }
 
