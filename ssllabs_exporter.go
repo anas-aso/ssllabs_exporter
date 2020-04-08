@@ -33,10 +33,15 @@ import (
 	"github.com/anas-aso/ssllabs_exporter/pkg/ssllabs"
 )
 
+const (
+	pruneDelay = 1 * time.Minute
+)
+
 var (
-	listenAddress = kingpin.Flag("listen-address", "The address to listen on for HTTP requests.").Default(":19115").String()
-	probeTimeout  = kingpin.Flag("timeout", "Assessment timeout in seconds (including retries).").Default("600").Float64()
-	logLevel      = kingpin.Flag("log-level", "Printed logs level.").Default("debug").Enum("error", "warn", "info", "debug")
+	listenAddress  = kingpin.Flag("listen-address", "The address to listen on for HTTP requests.").Default(":19115").String()
+	probeTimeout   = kingpin.Flag("timeout", "Assessment timeout in seconds (including retries).").Default("600").Float64()
+	logLevel       = kingpin.Flag("log-level", "Printed logs level.").Default("debug").Enum("error", "warn", "info", "debug")
+	cacheRetention = kingpin.Flag("cache-retention", "Time duration to keep entries in cache such as 30m or 1h5m. Valid duration units are ns, us (or µs), ms, s, m, h.").Default("5m").String()
 
 	// build parameters
 	branch    string
@@ -45,7 +50,7 @@ var (
 	version   string
 )
 
-func probeHandler(w http.ResponseWriter, r *http.Request, logger log.Logger, timeoutSeconds float64) {
+func probeHandler(w http.ResponseWriter, r *http.Request, logger log.Logger, timeoutSeconds float64, resultsCache *cache) {
 	params := r.URL.Query()
 	target := params.Get("target")
 	if target == "" {
@@ -63,7 +68,14 @@ func probeHandler(w http.ResponseWriter, r *http.Request, logger log.Logger, tim
 	defer cancel()
 	r = r.WithContext(ctx)
 
-	registry := exporter.Handle(ctx, logger, target)
+	registry := resultsCache.get(target)
+
+	if registry != nil {
+		level.Debug(logger).Log("msg", "serving results from cache", "target", target)
+	} else {
+		registry = exporter.Handle(ctx, logger, target)
+		resultsCache.add(target, registry)
+	}
 
 	h := promhttp.HandlerFor(registry, promhttp.HandlerOpts{})
 	h.ServeHTTP(w, r)
@@ -98,6 +110,13 @@ func main() {
 		level.Warn(logger).Log("msg", "configured timeout is less than 60 seconds. switching to default timeout")
 		timeoutSeconds = float64(600 * time.Second)
 	}
+
+	cacheRetentionInput, err := time.ParseDuration(*cacheRetention)
+	if err != nil {
+		level.Error(logger).Log("msg", "failed to parse the cache retention value", "err", err)
+		os.Exit(1)
+	}
+	resultsCache := newCache(pruneDelay, cacheRetentionInput)
 
 	level.Info(logger).Log("msg", "Starting ssllabs_exporter", "version", version)
 
@@ -135,7 +154,7 @@ func main() {
 
 	http.Handle("/metrics", promhttp.Handler())
 	http.HandleFunc("/probe", func(w http.ResponseWriter, r *http.Request) {
-		probeHandler(w, r, logger, timeoutSeconds)
+		probeHandler(w, r, logger, timeoutSeconds, resultsCache)
 	})
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
