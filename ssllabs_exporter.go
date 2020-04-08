@@ -41,7 +41,7 @@ var (
 	listenAddress  = kingpin.Flag("listen-address", "The address to listen on for HTTP requests.").Default(":19115").String()
 	probeTimeout   = kingpin.Flag("timeout", "Assessment timeout in seconds (including retries).").Default("600").Float64()
 	logLevel       = kingpin.Flag("log-level", "Printed logs level.").Default("debug").Enum("error", "warn", "info", "debug")
-	cacheRetention = kingpin.Flag("cache-retention", "Time duration to keep entries in cache such as 30m or 1h5m. Valid duration units are ms, s, m, h, d, w, y.").Default("5m").String()
+	cacheRetention = kingpin.Flag("cache-retention", "Time duration to keep entries in cache such as 30m or 1h5m. Valid duration units are ns, us (or µs), ms, s, m, h.").Default("5m").String()
 
 	// build parameters
 	branch    string
