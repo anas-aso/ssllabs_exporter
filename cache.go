@@ -48,7 +48,7 @@ type cache struct {
 }
 
 // add a new cache entry or update it if already exists
-func (c *cache) add(id string, result *prometheus.Gatherer) {
+func (c *cache) add(id string, result prometheus.Gatherer) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -71,7 +71,7 @@ func (c *cache) add(id string, result *prometheus.Gatherer) {
 		c.lru.PushBack(entry)
 	}
 
-	c.entries[id] = result
+	c.entries[id] = &result
 }
 
 // retrieve a cache entry if exists, otherwise return nil

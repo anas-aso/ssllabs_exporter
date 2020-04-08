@@ -74,7 +74,7 @@ func probeHandler(w http.ResponseWriter, r *http.Request, logger log.Logger, tim
 		level.Debug(logger).Log("msg", "serving results from cache", "target", target)
 	} else {
 		registry = exporter.Handle(ctx, logger, target)
-		resultsCache.add(target, &registry)
+		resultsCache.add(target, registry)
 	}
 
 	h := promhttp.HandlerFor(registry, promhttp.HandlerOpts{})
