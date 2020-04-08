@@ -22,19 +22,32 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+// cacheEntry contains cache elements meta data
 type cacheEntry struct {
-	id         string
+	// the target host is used as a unique cache entry identifier
+	id string
+
+	// expiry time for the cache entry (calculated on creation time)
 	expiryTime int64
 }
 
 type cache struct {
-	mu         sync.Mutex
-	entries    map[string]*prometheus.Gatherer
-	lru        *list.List
-	retention  time.Duration
+	mu sync.Mutex
+
+	// map of cached Prometheus registry for a fast access
+	entries map[string]*prometheus.Gatherer
+
+	// a linked ordered list for a faster cache retention
+	lru *list.List
+
+	// how long each cache entry should be kept
+	retention time.Duration
+
+	// how frequent the cache retention is verified/applied
 	pruneDelay time.Duration
 }
 
+// add a new cache entry or update it if already exists
 func (c *cache) add(id string, result *prometheus.Gatherer) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -61,6 +74,7 @@ func (c *cache) add(id string, result *prometheus.Gatherer) {
 	c.entries[id] = result
 }
 
+// retrieve a cache entry if exists, otherwise return nil
 func (c *cache) get(id string) prometheus.Gatherer {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -73,6 +87,7 @@ func (c *cache) get(id string) prometheus.Gatherer {
 	return nil
 }
 
+// prune expired entries from the cache
 func (c *cache) prune() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -82,6 +97,7 @@ func (c *cache) prune() {
 	for e != nil {
 		entry := e.Value.(*cacheEntry)
 
+		// since the list is ordered, we can stop the iteration once a fresh element is found
 		if entry.expiryTime > time.Now().Unix() {
 			break
 		}
@@ -93,6 +109,7 @@ func (c *cache) prune() {
 	}
 }
 
+// start a time ticker to remove expired cache entries
 func (c *cache) start() {
 	ticker := time.NewTicker(c.pruneDelay)
 
@@ -101,6 +118,7 @@ func (c *cache) start() {
 	}
 }
 
+// create a new cache and start the retention worker in the background
 func newCache(pruneDelay, retention time.Duration) *cache {
 	c := &cache{
 		entries:    make(map[string]*prometheus.Gatherer),
