@@ -150,7 +150,9 @@ func getAnalyze(target string, new bool) (result Result) {
 		request += "&startNew=on"
 	}
 
-	response, err := http.Get(request)
+	// TODO: make http timeout configurable
+	httpClient := http.Client{Timeout: 1 * time.Minute}
+	response, err := httpClient.Get(request)
 	if err != nil {
 		result.Status = StatusHTTPError
 		return
