@@ -16,6 +16,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"os"
 	"runtime"
@@ -83,23 +84,11 @@ func main() {
 	kingpin.Version(version)
 	kingpin.Parse()
 
-	var logger log.Logger
-	var lvl level.Option
-	switch *logLevel {
-	case "error":
-		lvl = level.AllowError()
-	case "warn":
-		lvl = level.AllowWarn()
-	case "info":
-		lvl = level.AllowInfo()
-	case "debug":
-		lvl = level.AllowDebug()
-	default:
-		panic("unexpected log level")
+	logger, err := createLogger(*logLevel)
+	if err != nil {
+		fmt.Printf("failed to create logger with error: %v", err)
+		os.Exit(1)
 	}
-	logger = log.NewJSONLogger(log.NewSyncWriter(os.Stderr))
-	logger = level.NewFilter(logger, lvl)
-	logger = log.With(logger, "timestamp", log.DefaultTimestampUTC)
 
 	timeoutSeconds, err := time.ParseDuration(*probeTimeout)
 	if err != nil {
@@ -193,4 +182,29 @@ func getTimeout(r *http.Request, timeout time.Duration) time.Duration {
 	}
 
 	return timeout
+}
+
+// create logger with the provided log level
+func createLogger(l string) (logger log.Logger, err error) {
+	var lvl level.Option
+	switch l {
+	case "error":
+		lvl = level.AllowError()
+	case "warn":
+		lvl = level.AllowWarn()
+	case "info":
+		lvl = level.AllowInfo()
+	case "debug":
+		lvl = level.AllowDebug()
+	default:
+		return nil, fmt.Errorf("unrecognized log level: %v", l)
+	}
+
+	logger = log.NewJSONLogger(log.NewSyncWriter(os.Stderr))
+	logger = level.NewFilter(logger, lvl)
+	logger = log.With(logger, "timestamp", log.DefaultTimestampUTC)
+
+	logger.Log()
+
+	return logger, nil
 }

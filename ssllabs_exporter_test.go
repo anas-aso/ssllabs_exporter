@@ -62,3 +62,17 @@ func TestGetTimeout(t *testing.T) {
 		}
 	}
 }
+
+func TestCreateLogger(t *testing.T) {
+	_, err := createLogger("unexpected")
+	if err == nil {
+		t.Errorf("logger created with unexpected level")
+	}
+
+	for _, lvl := range []string{"error", "warn", "info", "debug"} {
+		_, err := createLogger(lvl)
+		if err != nil {
+			t.Errorf("failed to create logger with level : %v", lvl)
+		}
+	}
+}
