@@ -97,12 +97,12 @@ func main() {
 		os.Exit(1)
 	}
 
-	cacheRetentionInput, err := time.ParseDuration(*cacheRetention)
+	cacheRetentionDuration, err := time.ParseDuration(*cacheRetention)
 	if err != nil {
 		level.Error(logger).Log("msg", "failed to parse the cache retention value", "err", err)
 		os.Exit(1)
 	}
-	resultsCache := newCache(pruneDelay, cacheRetentionInput)
+	resultsCache := newCache(pruneDelay, cacheRetentionDuration)
 
 	level.Info(logger).Log("msg", "Starting ssllabs_exporter", "version", version)
 
@@ -122,7 +122,7 @@ func main() {
 
 	ssllabsInfo, err := ssllabs.Info()
 	if err != nil {
-		level.Error(logger).Log("msg", "Could not fetch SSLLabs API Info.", "err", err)
+		level.Error(logger).Log("msg", "Could not fetch SSLLabs API Info", "err", err)
 		os.Exit(1)
 	}
 
@@ -139,9 +139,11 @@ func main() {
 	)
 
 	http.Handle("/metrics", promhttp.Handler())
+
 	http.HandleFunc("/probe", func(w http.ResponseWriter, r *http.Request) {
 		probeHandler(w, r, logger, timeoutSeconds, resultsCache)
 	})
+
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
 		w.Write([]byte(`<html>
@@ -155,6 +157,7 @@ func main() {
 	})
 
 	level.Info(logger).Log("msg", "Listening on address", "address", *listenAddress)
+
 	if err := http.ListenAndServe(*listenAddress, nil); err != nil {
 		level.Error(logger).Log("msg", "Error starting HTTP server", "err", err)
 		os.Exit(1)
