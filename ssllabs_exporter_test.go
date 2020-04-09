@@ -15,6 +15,7 @@
 package main
 
 import (
+	"errors"
 	"net/http"
 	"testing"
 	"time"
@@ -73,6 +74,41 @@ func TestCreateLogger(t *testing.T) {
 		_, err := createLogger(lvl)
 		if err != nil {
 			t.Errorf("failed to create logger with level : %v", lvl)
+		}
+	}
+}
+
+func TestValidateTimeout(t *testing.T) {
+	var cases = []struct {
+		name            string
+		flagTimeout     string
+		expectedTimeout time.Duration
+		expectedError   error
+	}{
+		{
+			name:            "un_parsable_duration",
+			flagTimeout:     "not_a_duration",
+			expectedTimeout: 0,
+			expectedError:   errors.New("time: invalid duration not_a_duration"),
+		},
+		{
+			name:            "less_than_1m",
+			flagTimeout:     "1s",
+			expectedTimeout: 0,
+			expectedError:   errors.New("probe timeout must be a least 1 minute"),
+		},
+		{
+			name:            "good_value",
+			flagTimeout:     "5m",
+			expectedTimeout: 5 * time.Minute,
+			expectedError:   nil,
+		},
+	}
+
+	for _, c := range cases {
+		timeout, err := validateTimeout(c.flagTimeout)
+		if err != nil && err.Error() != c.expectedError.Error() || err == nil && c.expectedError != nil || timeout != c.expectedTimeout {
+			t.Errorf("Test case : %v failed.\nExpected : (%v, %v)\nGot : (%v, %v)\n", c.name, c.expectedTimeout, c.expectedError, timeout, err)
 		}
 	}
 }

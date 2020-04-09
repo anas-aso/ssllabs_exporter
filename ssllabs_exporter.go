@@ -16,6 +16,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -40,7 +41,7 @@ const (
 
 var (
 	listenAddress  = kingpin.Flag("listen-address", "The address to listen on for HTTP requests.").Default(":19115").String()
-	probeTimeout   = kingpin.Flag("timeout", "Time duration before canceling an ongoing probe such as 30m or 1h5m. Valid duration units are ns, us (or µs), ms, s, m, h.").Default("5m").String()
+	probeTimeout   = kingpin.Flag("timeout", "Time duration before canceling an ongoing probe such as 30m or 1h5m. This value must be at least 1m. Valid duration units are ns, us (or µs), ms, s, m, h.").Default("5m").String()
 	logLevel       = kingpin.Flag("log-level", "Printed logs level.").Default("debug").Enum("error", "warn", "info", "debug")
 	cacheRetention = kingpin.Flag("cache-retention", "Time duration to keep entries in cache such as 30m or 1h5m. Valid duration units are ns, us (or µs), ms, s, m, h.").Default("5m").String()
 
@@ -90,16 +91,10 @@ func main() {
 		os.Exit(1)
 	}
 
-	timeoutSeconds, err := time.ParseDuration(*probeTimeout)
+	timeoutSeconds, err := validateTimeout(*probeTimeout)
 	if err != nil {
-		level.Error(logger).Log("msg", "failed to parse the probe timeout value", "err", err)
+		level.Error(logger).Log("msg", "failed to validate the probe timeout value", "err", err)
 		os.Exit(1)
-	}
-	// A new assessment will always take at least 60 seconds per host
-	// endpoint. A timeout less than 60 seconds doesn't make sense.
-	if timeoutSeconds < 1*time.Minute {
-		level.Warn(logger).Log("msg", "configured timeout is less than 1 minute. Switching to default timeout (5m)")
-		timeoutSeconds = 5 * time.Minute
 	}
 
 	cacheRetentionInput, err := time.ParseDuration(*cacheRetention)
@@ -207,4 +202,20 @@ func createLogger(l string) (logger log.Logger, err error) {
 	logger.Log()
 
 	return logger, nil
+}
+
+// validate the provided probe timeout
+func validateTimeout(timeout string) (time.Duration, error) {
+	timeoutSeconds, err := time.ParseDuration(timeout)
+	if err != nil {
+		return 0, err
+	}
+
+	// A new assessment will always take at least 60 seconds per host
+	// endpoint. A timeout less than 60 seconds doesn't make sense.
+	if timeoutSeconds < time.Minute {
+		return 0, errors.New("probe timeout must be a least 1 minute")
+	}
+
+	return timeoutSeconds, nil
 }
