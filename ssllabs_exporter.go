@@ -202,8 +202,6 @@ func createLogger(l string) (logger log.Logger, err error) {
 	logger = level.NewFilter(logger, lvl)
 	logger = log.With(logger, "timestamp", log.DefaultTimestampUTC)
 
-	logger.Log()
-
 	return logger, nil
 }
 
