@@ -41,9 +41,9 @@ const (
 
 var (
 	listenAddress  = kingpin.Flag("listen-address", "The address to listen on for HTTP requests.").Default(":19115").String()
-	probeTimeout   = kingpin.Flag("timeout", "Time duration before canceling an ongoing probe such as 30m or 1h5m. This value must be at least 1m. Valid duration units are ns, us (or µs), ms, s, m, h.").Default("5m").String()
+	probeTimeout   = kingpin.Flag("timeout", "Time duration before canceling an ongoing probe such as 30m or 1h5m. This value must be at least 1m. Valid duration units are ns, us (or µs), ms, s, m, h.").Default("10m").String()
 	logLevel       = kingpin.Flag("log-level", "Printed logs level.").Default("debug").Enum("error", "warn", "info", "debug")
-	cacheRetention = kingpin.Flag("cache-retention", "Time duration to keep entries in cache such as 30m or 1h5m. Valid duration units are ns, us (or µs), ms, s, m, h.").Default("5m").String()
+	cacheRetention = kingpin.Flag("cache-retention", "Time duration to keep entries in cache such as 30m or 1h5m. Valid duration units are ns, us (or µs), ms, s, m, h.").Default("1h").String()
 
 	// build parameters
 	branch    string
