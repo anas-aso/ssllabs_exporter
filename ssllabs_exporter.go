@@ -16,6 +16,8 @@ package main
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"net/http"
 	"os"
 	"runtime"
@@ -39,9 +41,9 @@ const (
 
 var (
 	listenAddress  = kingpin.Flag("listen-address", "The address to listen on for HTTP requests.").Default(":19115").String()
-	probeTimeout   = kingpin.Flag("timeout", "Assessment timeout in seconds (including retries).").Default("600").Float64()
+	probeTimeout   = kingpin.Flag("timeout", "Time duration before canceling an ongoing probe such as 30m or 1h5m. This value must be at least 1m. Valid duration units are ns, us (or µs), ms, s, m, h.").Default("10m").String()
 	logLevel       = kingpin.Flag("log-level", "Printed logs level.").Default("debug").Enum("error", "warn", "info", "debug")
-	cacheRetention = kingpin.Flag("cache-retention", "Time duration to keep entries in cache such as 30m or 1h5m. Valid duration units are ns, us (or µs), ms, s, m, h.").Default("5m").String()
+	cacheRetention = kingpin.Flag("cache-retention", "Time duration to keep entries in cache such as 30m or 1h5m. Valid duration units are ns, us (or µs), ms, s, m, h.").Default("1h").String()
 
 	// build parameters
 	branch    string
@@ -50,30 +52,33 @@ var (
 	version   string
 )
 
-func probeHandler(w http.ResponseWriter, r *http.Request, logger log.Logger, timeoutSeconds float64, resultsCache *cache) {
-	params := r.URL.Query()
-	target := params.Get("target")
+func probeHandler(w http.ResponseWriter, r *http.Request, logger log.Logger, timeoutSeconds time.Duration, resultsCache *cache) {
+	target := r.URL.Query().Get("target")
+	// TODO: add more validation for the target (e.g valid hostname, DNS, etc)
 	if target == "" {
-		// TODO: add more validation for the target (e.g valid hostname, DNS, etc)
 		level.Error(logger).Log("msg", "Target parameter is missing")
 		http.Error(w, "Target parameter is missing", http.StatusBadRequest)
 		return
 	}
 
-	if t, ok := scrapeTimeoutExists(r); ok {
-		timeoutSeconds = t * float64(time.Second)
-	}
-
-	ctx, cancel := context.WithTimeout(r.Context(), time.Duration(timeoutSeconds))
-	defer cancel()
-	r = r.WithContext(ctx)
-
+	// check if the results are available in the cache
 	registry := resultsCache.get(target)
 
 	if registry != nil {
 		level.Debug(logger).Log("msg", "serving results from cache", "target", target)
 	} else {
+		// if the results do not exist in the cache, trigger a new assessment
+
+		timeoutSeconds = getTimeout(r, timeoutSeconds)
+
+		ctx, cancel := context.WithTimeout(r.Context(), timeoutSeconds)
+		defer cancel()
+
+		r = r.WithContext(ctx)
+
 		registry = exporter.Handle(ctx, logger, target)
+
+		// add the assessment results to the cache
 		resultsCache.add(target, registry)
 	}
 
@@ -85,38 +90,24 @@ func main() {
 	kingpin.Version(version)
 	kingpin.Parse()
 
-	var logger log.Logger
-	var lvl level.Option
-	switch *logLevel {
-	case "error":
-		lvl = level.AllowError()
-	case "warn":
-		lvl = level.AllowWarn()
-	case "info":
-		lvl = level.AllowInfo()
-	case "debug":
-		lvl = level.AllowDebug()
-	default:
-		panic("unexpected log level")
-	}
-	logger = log.NewJSONLogger(log.NewSyncWriter(os.Stderr))
-	logger = level.NewFilter(logger, lvl)
-	logger = log.With(logger, "timestamp", log.DefaultTimestampUTC)
-
-	timeoutSeconds := *probeTimeout * float64(time.Second)
-	// A new assessment will always take at least 60 seconds per host
-	// endpoint. A timeout less than 60 seconds doesn't make sense.
-	if timeoutSeconds < float64(60*time.Second) {
-		level.Warn(logger).Log("msg", "configured timeout is less than 60 seconds. switching to default timeout")
-		timeoutSeconds = float64(600 * time.Second)
+	logger, err := createLogger(*logLevel)
+	if err != nil {
+		fmt.Printf("failed to create logger with error: %v", err)
+		os.Exit(1)
 	}
 
-	cacheRetentionInput, err := time.ParseDuration(*cacheRetention)
+	timeoutSeconds, err := validateTimeout(*probeTimeout)
+	if err != nil {
+		level.Error(logger).Log("msg", "failed to validate the probe timeout value", "err", err)
+		os.Exit(1)
+	}
+
+	cacheRetentionDuration, err := time.ParseDuration(*cacheRetention)
 	if err != nil {
 		level.Error(logger).Log("msg", "failed to parse the cache retention value", "err", err)
 		os.Exit(1)
 	}
-	resultsCache := newCache(pruneDelay, cacheRetentionInput)
+	resultsCache := newCache(pruneDelay, cacheRetentionDuration)
 
 	level.Info(logger).Log("msg", "Starting ssllabs_exporter", "version", version)
 
@@ -136,7 +127,7 @@ func main() {
 
 	ssllabsInfo, err := ssllabs.Info()
 	if err != nil {
-		level.Error(logger).Log("msg", "Could not fetch SSLLabs API Info.", "err", err)
+		level.Error(logger).Log("msg", "Could not fetch SSLLabs API Info", "err", err)
 		os.Exit(1)
 	}
 
@@ -153,9 +144,11 @@ func main() {
 	)
 
 	http.Handle("/metrics", promhttp.Handler())
+
 	http.HandleFunc("/probe", func(w http.ResponseWriter, r *http.Request) {
 		probeHandler(w, r, logger, timeoutSeconds, resultsCache)
 	})
+
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
 		w.Write([]byte(`<html>
@@ -169,20 +162,66 @@ func main() {
 	})
 
 	level.Info(logger).Log("msg", "Listening on address", "address", *listenAddress)
+
 	if err := http.ListenAndServe(*listenAddress, nil); err != nil {
 		level.Error(logger).Log("msg", "Error starting HTTP server", "err", err)
 		os.Exit(1)
 	}
 }
 
-// get scrape timeout value if defined
-func scrapeTimeoutExists(r *http.Request) (float64, bool) {
+// get the min of Prometheus scrape timeout (if found) and the flag timeout
+func getTimeout(r *http.Request, timeout time.Duration) time.Duration {
 	if v := r.Header.Get("X-Prometheus-Scrape-Timeout-Seconds"); v != "" {
-		timeoutSeconds, err := strconv.ParseFloat(v, 64)
+		scrapeTimeout, err := strconv.ParseFloat(v, 64)
 		if err != nil {
-			return 0, false
+			return timeout
 		}
-		return timeoutSeconds, true
+
+		scrapeTimeoutSeconds := time.Duration(scrapeTimeout) * time.Second
+
+		if scrapeTimeoutSeconds < timeout {
+			return scrapeTimeoutSeconds
+		}
 	}
-	return 0, false
+
+	return timeout
+}
+
+// create logger with the provided log level
+func createLogger(l string) (logger log.Logger, err error) {
+	var lvl level.Option
+	switch l {
+	case "error":
+		lvl = level.AllowError()
+	case "warn":
+		lvl = level.AllowWarn()
+	case "info":
+		lvl = level.AllowInfo()
+	case "debug":
+		lvl = level.AllowDebug()
+	default:
+		return nil, fmt.Errorf("unrecognized log level: %v", l)
+	}
+
+	logger = log.NewJSONLogger(log.NewSyncWriter(os.Stderr))
+	logger = level.NewFilter(logger, lvl)
+	logger = log.With(logger, "timestamp", log.DefaultTimestampUTC)
+
+	return logger, nil
+}
+
+// validate the provided probe timeout
+func validateTimeout(timeout string) (time.Duration, error) {
+	timeoutSeconds, err := time.ParseDuration(timeout)
+	if err != nil {
+		return 0, err
+	}
+
+	// A new assessment will always take at least 60 seconds per host
+	// endpoint. A timeout less than 60 seconds doesn't make sense.
+	if timeoutSeconds < time.Minute {
+		return 0, errors.New("probe timeout must be a least 1 minute")
+	}
+
+	return timeoutSeconds, nil
 }

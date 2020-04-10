@@ -272,7 +272,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "ssllabs_grade_age_seconds{instance=~\"$target\"} * 1000",
+          "expr": "ssllabs_grade_time_seconds{instance=~\"$target\"} * 1000",
           "interval": "",
           "legendFormat": "{{ instance }}",
           "refId": "A"

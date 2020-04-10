@@ -23,8 +23,9 @@ usage: ssllabs_exporter [<flags>]
 Flags:
   --help                     Show context-sensitive help (also try --help-long and --help-man).
   --listen-address=":19115"  The address to listen on for HTTP requests.
-  --timeout=300              Assessment timeout in seconds (including retries).
+  --timeout="10m"            Time duration before canceling an ongoing probe such as 30m or 1h5m. This value MUST be at least 1m. Valid duration units are ns, us (or µs), ms, s, m, h.
   --log-level=debug          Printed logs level.
+  --cache-retention="1h"     Time duration to keep entries in cache such as 30m or 1h5m. Valid duration units are ns, us (or µs), ms, s, m, h.
   --version                  Show application version.
 ```
 
@@ -51,7 +52,7 @@ The Grafana dashboard below is available [here](examples/grafana_dashboard.json)
 | ssllabs_probe_duration_seconds | how long the assessment took in seconds |
 | ssllabs_probe_success | whether we were able to fetch an assessment result from SSLLabs API (value of 1) or not (value of 0) regardless of the result content |
 | ssllabs_grade | the grade of the target host |
-| ssllabs_grade_age_seconds | when the result was generated in Unix time |
+| ssllabs_grade_time_seconds | when the result was generated in Unix time |
 
 #### `ssllabs_grade` possible values:
   - `1` : Assessment was successful and the grade is exposed in the `grade` label of the metric.

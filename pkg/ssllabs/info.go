@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
+	"time"
 )
 
 // APIInfo /info endpoint result
@@ -30,7 +31,9 @@ type APIInfo struct {
 
 // Info calls /info endpoint and returns and Info
 func Info() (info APIInfo, err error) {
-	response, err := http.Get(API + "/info")
+	// TODO: make http timeout configurable
+	httpClient := http.Client{Timeout: 1 * time.Minute}
+	response, err := httpClient.Get(API + "/info")
 	if err != nil {
 		return
 	}
