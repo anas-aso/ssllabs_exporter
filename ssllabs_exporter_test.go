@@ -17,9 +17,37 @@ package main
 import (
 	"errors"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
+
+	"github.com/go-kit/kit/log"
 )
+
+func TestProbeHandler(t *testing.T) {
+	testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(10 * time.Second)
+	}))
+	defer testServer.Close()
+
+	req, err := http.NewRequest("GET", "?target="+testServer.URL, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req.Header.Set("X-Prometheus-Scrape-Timeout-Seconds", "1")
+
+	testRecorder := httptest.NewRecorder()
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		probeHandler(w, r, log.NewNopLogger(), 1, newCache(1, 1))
+	})
+
+	handler.ServeHTTP(testRecorder, req)
+
+	if status := testRecorder.Code; status != http.StatusOK {
+		t.Errorf("probe handler returned the wrong status code.\nExpected : %v\nGot : %v\n", status, http.StatusOK)
+	}
+}
 
 func TestGetTimeout(t *testing.T) {
 	var cases = []struct {

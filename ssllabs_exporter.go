@@ -53,27 +53,32 @@ var (
 )
 
 func probeHandler(w http.ResponseWriter, r *http.Request, logger log.Logger, timeoutSeconds time.Duration, resultsCache *cache) {
-	params := r.URL.Query()
-	target := params.Get("target")
+	target := r.URL.Query().Get("target")
+	// TODO: add more validation for the target (e.g valid hostname, DNS, etc)
 	if target == "" {
-		// TODO: add more validation for the target (e.g valid hostname, DNS, etc)
 		level.Error(logger).Log("msg", "Target parameter is missing")
 		http.Error(w, "Target parameter is missing", http.StatusBadRequest)
 		return
 	}
 
-	timeoutSeconds = getTimeout(r, timeoutSeconds)
-
-	ctx, cancel := context.WithTimeout(r.Context(), timeoutSeconds)
-	defer cancel()
-	r = r.WithContext(ctx)
-
+	// check if the results are available in the cache
 	registry := resultsCache.get(target)
 
 	if registry != nil {
 		level.Debug(logger).Log("msg", "serving results from cache", "target", target)
 	} else {
+		// if the results do not exist in the cache, trigger a new assessment
+
+		timeoutSeconds = getTimeout(r, timeoutSeconds)
+
+		ctx, cancel := context.WithTimeout(r.Context(), timeoutSeconds)
+		defer cancel()
+
+		r = r.WithContext(ctx)
+
 		registry = exporter.Handle(ctx, logger, target)
+
+		// add the assessment results to the cache
 		resultsCache.add(target, registry)
 	}
 
