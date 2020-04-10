@@ -25,7 +25,7 @@ const (
 	StatusInProgress = "IN_PROGRESS"
 	// StatusReady SSLLabs assessment finished successfully
 	StatusReady = "READY"
-	// StatusHTTPError error processing the HTTP request to SSLLabs API
+	// StatusHTTPError error processing the HTTP response from SSLLabs API
 	StatusHTTPError = "HTTP_ERROR"
 	// StatusServerError SSLLabs API server error or rate limiting
 	StatusServerError = "SERVER_ERROR"
