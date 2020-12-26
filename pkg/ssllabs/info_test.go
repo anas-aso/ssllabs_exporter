@@ -26,7 +26,7 @@ func TestInfo(t *testing.T) {
 	}
 
 	expectedInfo := APIInfo{
-		EngineVersion:      "2.1.3",
+		EngineVersion:      "2.1.8",
 		CriteriaVersion:    "2009q",
 		MaxAssessments:     25,
 		CurrentAssessments: 0,
