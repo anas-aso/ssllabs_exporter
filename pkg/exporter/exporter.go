@@ -26,7 +26,7 @@ import (
 
 // Handle runs SSLLabs assessment on the specified target
 // and returns a Prometheus Registry with the results
-func Handle(ctx context.Context, logger log.Logger, target string) prometheus.Gatherer {
+func Handle(ctx context.Context, logger log.Logger, target string) (prometheus.Gatherer, bool) {
 	var (
 		registry           = prometheus.NewRegistry()
 		probeDurationGauge = prometheus.NewGauge(prometheus.GaugeOpts{
@@ -65,7 +65,7 @@ func Handle(ctx context.Context, logger log.Logger, target string) prometheus.Ga
 		// set grade to -1 if the assessment failed
 		probeGaugeVec.WithLabelValues("-").Set(-1)
 
-		return registry
+		return registry, false
 	}
 
 	probeSuccessGauge.Set(1)
@@ -79,5 +79,5 @@ func Handle(ctx context.Context, logger log.Logger, target string) prometheus.Ga
 		probeGaugeVec.WithLabelValues("-").Set(0)
 	}
 
-	return registry
+	return registry, true
 }

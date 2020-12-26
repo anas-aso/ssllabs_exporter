@@ -76,10 +76,13 @@ func probeHandler(w http.ResponseWriter, r *http.Request, logger log.Logger, tim
 
 		r = r.WithContext(ctx)
 
-		registry = exporter.Handle(ctx, logger, target)
+		var ok bool
+		registry, ok = exporter.Handle(ctx, logger, target)
 
-		// add the assessment results to the cache
-		resultsCache.add(target, registry)
+		if ok {
+			// add the assessment results to the cache
+			resultsCache.add(target, registry)
+		}
 	}
 
 	h := promhttp.HandlerFor(registry, promhttp.HandlerOpts{})

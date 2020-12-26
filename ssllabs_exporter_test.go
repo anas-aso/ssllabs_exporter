@@ -37,15 +37,21 @@ func TestProbeHandler(t *testing.T) {
 
 	req.Header.Set("X-Prometheus-Scrape-Timeout-Seconds", "1")
 
+	cache := newCache(time.Minute, time.Minute)
+
 	testRecorder := httptest.NewRecorder()
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		probeHandler(w, r, log.NewNopLogger(), 1, newCache(1, 1))
+		probeHandler(w, r, log.NewNopLogger(), 1, cache)
 	})
 
 	handler.ServeHTTP(testRecorder, req)
 
 	if status := testRecorder.Code; status != http.StatusOK {
 		t.Errorf("probe handler returned the wrong status code.\nExpected : %v\nGot : %v\n", status, http.StatusOK)
+	}
+
+	if results := cache.get(testServer.URL); results != nil {
+		t.Errorf("unsuccessful result was cached")
 	}
 }
 
