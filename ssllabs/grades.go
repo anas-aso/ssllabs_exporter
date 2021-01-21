@@ -1,13 +1,21 @@
-package exporter
+// Copyright 2020 Anas Ait Said Oubrahim
 
-import (
-	"github.com/anas-aso/ssllabs_exporter/pkg/ssllabs"
-)
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 
-// Map grades to numerical values as defined in https://github.com/ssllabs/research/wiki/SSL-Server-Rating-Guide#methodology-overview
-// Since the documented mapping provides a range of values for each grade instead of fixed ones, we take half the documented interval
-// to allow mapping case like A+ and A-.
-// A special undocumented cases are T and M for which we assign 0.
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// Modifications copyright (C) 2021 diamonwiggins
+
+package ssllabs
+
 var gradesMapping = map[string]float64{
 	"A":     (80 + 100) / 2,
 	"A+":    ((80 + 100) / 2) + 1,
@@ -23,7 +31,7 @@ var gradesMapping = map[string]float64{
 }
 
 // convert the returned grade to a number based on https://github.com/ssllabs/research/wiki/SSL-Server-Rating-Guide
-func endpointsLowestGrade(ep []ssllabs.Endpoint) (result string) {
+func EndpointsLowestGrade(ep []Endpoint) (result string) {
 	if len(ep) == 0 {
 		return
 	}

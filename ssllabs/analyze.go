@@ -12,10 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Modifications copyright (C) 2021 diamonwiggins
+
 package ssllabs
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -23,8 +24,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/go-kit/kit/log"
-	"github.com/go-kit/kit/log/level"
+	"github.com/sirupsen/logrus"
 )
 
 // Result a lightweight version of the returned
@@ -54,33 +54,48 @@ type Endpoint struct {
 
 // Analyze executes the SSL test HTTP requests and
 // returns an Result and error (if any)
-func Analyze(ctx context.Context, logger log.Logger, target string) (result Result, err error) {
-	level.Debug(logger).Log("msg", "start processing", "target", target)
+func Analyze(log *logrus.Logger, target string) (result Result, err error) {
+	log.WithFields(logrus.Fields{
+		"target": target,
+	}).Info("start processing")
 
 	// check cached results and return them if they are "fresh enough"
 	// this is mainly useful if the previous context timed out or
 	// canceled before we collected the results
-	result, err = analyze(ctx, logger, target, false)
+	result, err = analyze(log, target, false)
 	if err != nil {
-		level.Error(logger).Log("msg", "failed to get cached result", "target", target)
+		log.WithFields(logrus.Fields{
+			"target": target,
+			"error":  err,
+		}).Error("failed to get cached result")
+
 		return
 	}
 
-	deadline, _ := ctx.Deadline()
+	deadline := time.Now().Add(time.Minute * 30)
 	// reconstruct the assessment timeout from the context deadline
 	timeout := deadline.Unix() - time.Now().Unix()
 
 	if result.Status == StatusReady && result.TestTime/1000+timeout >= time.Now().Unix() {
-		level.Debug(logger).Log("msg", "cached result will be used", "target", target)
+		log.WithFields(logrus.Fields{
+			"target": target,
+		}).Info("cached result will be used")
+
 		return
 	}
 
 	// trigger a new assessment if there isn't one in progress
 	if result.Status != StatusDNS && result.Status != StatusInProgress {
-		level.Debug(logger).Log("msg", "triggering a new assessment", "target", target)
-		result, err = analyze(ctx, logger, target, true)
+		log.WithFields(logrus.Fields{
+			"target": target,
+		}).Info("triggering a new assessment")
+
+		result, err = analyze(log, target, true)
 		if err != nil {
-			level.Error(logger).Log("msg", "failed to trigger a new assessment", "target", target)
+			log.WithFields(logrus.Fields{
+				"target": target,
+			}).Error("failed to trigger a new assessment")
+
 			return
 		}
 	}
@@ -88,7 +103,10 @@ func Analyze(ctx context.Context, logger log.Logger, target string) (result Resu
 	for {
 		switch {
 		case result.Status == StatusReady:
-			level.Debug(logger).Log("msg", "assessment finished successfully", "target", target)
+			log.WithFields(logrus.Fields{
+				"target": target,
+			}).Info("assessment finished successfully")
+
 			return result, nil
 		case time.Now().After(deadline):
 			result.Status = StatusDeadlineExceeded
@@ -96,10 +114,14 @@ func Analyze(ctx context.Context, logger log.Logger, target string) (result Resu
 		// fetch updates at random intervals
 		default:
 			time.Sleep(time.Duration(10+rand.Intn(10)) * time.Second)
-			level.Debug(logger).Log("msg", "fetching assessment updates", "target", target)
-			result, err = analyze(ctx, logger, target, false)
+
+			log.WithFields(logrus.Fields{
+				"target": target,
+			}).Info("fetching assessment updates")
+
+			result, err = analyze(log, target, false)
 			if err != nil {
-				level.Error(logger).Log("msg", "failed to fetch updates", "target", target)
+				log.Errorf("msg: failed to fetch updates, target: %s", target)
 				return
 			}
 		}
@@ -109,32 +131,37 @@ func Analyze(ctx context.Context, logger log.Logger, target string) (result Resu
 // retry API calls until we get a 200 response or the deadline is reached
 // this function is intended to take care of auto retrying when facing network
 // failures, remote server failures and/or rate limiting.
-func analyze(ctx context.Context, logger log.Logger, target string, new bool) (Result, error) {
+func analyze(log *logrus.Logger, target string, new bool) (Result, error) {
 	var result Result
-	deadline, _ := ctx.Deadline()
+	deadline := time.Now().Add(time.Minute * 30)
 	for time.Now().Before(deadline) {
-		select {
-		case <-ctx.Done():
-			result.Status = StatusAborted
-			return result, fmt.Errorf("context canceled")
+		//select {
+		//default:
+		switch result = getAnalyze(target, new); {
+		case result.Status == StatusDNS || result.Status == StatusInProgress || result.Status == StatusReady:
+			return result, nil
+		case result.Status == StatusError:
+			return result, fmt.Errorf("the remote server couldn't process the request")
+		case result.Status == StatusHTTPError:
+			coolOff := time.Duration(rand.Intn(10)) * time.Second
+			log.WithFields(logrus.Fields{
+				"target":   target,
+				"duration": coolOff,
+			}).Error("sleeping due to HTTP error")
+
+			time.Sleep(coolOff)
+		case result.Status == StatusServerError:
+			coolOff := time.Duration(30+rand.Intn(30)) * time.Second
+			log.WithFields(logrus.Fields{
+				"target":   target,
+				"duration": coolOff,
+			}).Error("sleeping due to remote server error")
+
+			time.Sleep(coolOff)
 		default:
-			switch result = getAnalyze(target, new); {
-			case result.Status == StatusDNS || result.Status == StatusInProgress || result.Status == StatusReady:
-				return result, nil
-			case result.Status == StatusError:
-				return result, fmt.Errorf("the remote server couldn't process the request")
-			case result.Status == StatusHTTPError:
-				coolOff := time.Duration(rand.Intn(10)) * time.Second
-				level.Debug(logger).Log("msg", "sleeping due to HTTP error", "target", target, "duration", coolOff)
-				time.Sleep(coolOff)
-			case result.Status == StatusServerError:
-				coolOff := time.Duration(30+rand.Intn(30)) * time.Second
-				level.Debug(logger).Log("msg", "sleeping due to remote server error", "target", target, "duration", coolOff)
-				time.Sleep(coolOff)
-			default:
-				return result, fmt.Errorf("unrecognized status: %v", result.Status)
-			}
+			return result, fmt.Errorf("unrecognized status: %v", result.Status)
 		}
+		//}
 		// always reset the result by the end of every iteration
 		result = Result{}
 	}
