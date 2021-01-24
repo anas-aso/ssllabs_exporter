@@ -117,7 +117,7 @@ func TestValidateTimeout(t *testing.T) {
 			name:            "un_parsable_duration",
 			flagTimeout:     "not_a_duration",
 			expectedTimeout: 0,
-			expectedError:   errors.New("time: invalid duration not_a_duration"),
+			expectedError:   errors.New(`time: invalid duration "not_a_duration"`),
 		},
 		{
 			name:            "less_than_1m",
