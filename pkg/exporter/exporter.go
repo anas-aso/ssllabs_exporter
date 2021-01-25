@@ -84,7 +84,7 @@ func Handle(ctx context.Context, logger log.Logger, target string) prometheus.Ga
 	return registry
 }
 
-// Failed checks wether the assessment failed or not
+// Failed checks whether the assessment failed or not
 func Failed(registry prometheus.Gatherer) bool {
 	metrics, err := registry.Gather()
 	if err != nil {
