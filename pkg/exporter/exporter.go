@@ -24,6 +24,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+const probeSuccessMetricName = "ssllabs_probe_success"
+
 // Handle runs SSLLabs assessment on the specified target
 // and returns a Prometheus Registry with the results
 func Handle(ctx context.Context, logger log.Logger, target string) prometheus.Gatherer {
@@ -34,7 +36,7 @@ func Handle(ctx context.Context, logger log.Logger, target string) prometheus.Ga
 			Help: "Displays how long the assessment took to complete in seconds",
 		})
 		probeSuccessGauge = prometheus.NewGauge(prometheus.GaugeOpts{
-			Name: "ssllabs_probe_success",
+			Name: probeSuccessMetricName,
 			Help: "Displays whether the assessment succeeded or not",
 		})
 
@@ -80,4 +82,21 @@ func Handle(ctx context.Context, logger log.Logger, target string) prometheus.Ga
 	}
 
 	return registry
+}
+
+// Failed checks wether the assessment failed or not
+func Failed(registry prometheus.Gatherer) bool {
+	metrics, err := registry.Gather()
+	if err != nil {
+		return false
+	}
+
+	for _, m := range metrics {
+		if m.GetName() == probeSuccessMetricName {
+			result := m.GetMetric()[0].GetGauge().Value
+			return *result == 0
+		}
+	}
+
+	return false
 }
