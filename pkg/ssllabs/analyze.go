@@ -158,13 +158,13 @@ func getAnalyze(target string, new bool) (result Result) {
 		return
 	}
 
+	defer response.Body.Close()
+
 	// this should happen in case of 429 or 5xx errors
 	if response.StatusCode != http.StatusOK {
 		result.Status = StatusServerError
 		return
 	}
-
-	defer response.Body.Close()
 
 	body, err := ioutil.ReadAll(response.Body)
 	if err != nil {
