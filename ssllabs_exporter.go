@@ -40,10 +40,11 @@ const (
 )
 
 var (
-	listenAddress  = kingpin.Flag("listen-address", "The address to listen on for HTTP requests.").Default(":19115").String()
-	probeTimeout   = kingpin.Flag("timeout", "Time duration before canceling an ongoing probe such as 30m or 1h5m. This value must be at least 1m. Valid duration units are ns, us (or µs), ms, s, m, h.").Default("10m").String()
-	logLevel       = kingpin.Flag("log-level", "Printed logs level.").Default("debug").Enum("error", "warn", "info", "debug")
-	cacheRetention = kingpin.Flag("cache-retention", "Time duration to keep entries in cache such as 30m or 1h5m. Valid duration units are ns, us (or µs), ms, s, m, h.").Default("1h").String()
+	listenAddress     = kingpin.Flag("listen-address", "The address to listen on for HTTP requests.").Default(":19115").String()
+	probeTimeout      = kingpin.Flag("timeout", "Time duration before canceling an ongoing probe such as 30m or 1h5m. This value must be at least 1m. Valid duration units are ns, us (or µs), ms, s, m, h.").Default("10m").String()
+	logLevel          = kingpin.Flag("log-level", "Printed logs level.").Default("debug").Enum("error", "warn", "info", "debug")
+	cacheRetention    = kingpin.Flag("cache-retention", "Time duration to keep entries in cache such as 30m or 1h5m. Valid duration units are ns, us (or µs), ms, s, m, h.").Default("1h").String()
+	cacheIgnoreFailed = kingpin.Flag("cache-ignore-failed", "Do not cache failed results due to intermittent SSLLabs issues.").Default("False").Bool()
 
 	// build parameters
 	branch    string
@@ -77,6 +78,11 @@ func probeHandler(w http.ResponseWriter, r *http.Request, logger log.Logger, tim
 		r = r.WithContext(ctx)
 
 		registry = exporter.Handle(ctx, logger, target)
+
+		// do not cache failed assessments if configured
+		if *cacheIgnoreFailed && exporter.Failed(registry) {
+			return
+		}
 
 		// add the assessment results to the cache
 		resultsCache.add(target, registry)
