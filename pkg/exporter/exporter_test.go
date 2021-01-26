@@ -56,9 +56,9 @@ func TestFailed(t *testing.T) {
 			probeSuccessGauge.Set(c.value)
 		}
 
-		grade := Failed(registry)
-		if grade != c.expectedResult {
-			t.Errorf("Test case : %v failed.\nExpected : %v\nGot : %v\n", c.name, c.expectedResult, grade)
+		result := Failed(registry)
+		if result != c.expectedResult {
+			t.Errorf("Test case : %v failed.\nExpected : %v\nGot : %v\n", c.name, c.expectedResult, result)
 		}
 	}
 }
