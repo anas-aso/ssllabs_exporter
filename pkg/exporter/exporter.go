@@ -20,14 +20,14 @@ import (
 
 	"github.com/anas-aso/ssllabs_exporter/pkg/ssllabs"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/rs/zerolog"
+	log "github.com/rs/zerolog"
 )
 
 const probeSuccessMetricName = "ssllabs_probe_success"
 
 // Handle runs SSLLabs assessment on the specified target
 // and returns a Prometheus Registry with the results
-func Handle(ctx context.Context, logger zerolog.Logger, target string) prometheus.Gatherer {
+func Handle(ctx context.Context, logger log.Logger, target string) prometheus.Gatherer {
 	var (
 		registry           = prometheus.NewRegistry()
 		probeDurationGauge = prometheus.NewGauge(prometheus.GaugeOpts{

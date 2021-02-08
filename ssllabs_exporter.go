@@ -27,7 +27,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/rs/zerolog"
+	log "github.com/rs/zerolog"
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/anas-aso/ssllabs_exporter/pkg/exporter"
@@ -52,7 +52,7 @@ var (
 	version   string
 )
 
-func probeHandler(w http.ResponseWriter, r *http.Request, logger zerolog.Logger, timeoutSeconds time.Duration, resultsCache *cache) {
+func probeHandler(w http.ResponseWriter, r *http.Request, logger log.Logger, timeoutSeconds time.Duration, resultsCache *cache) {
 	target := r.URL.Query().Get("target")
 	// TODO: add more validation for the target (e.g valid hostname, DNS, etc)
 	if target == "" {
@@ -193,28 +193,28 @@ func getTimeout(r *http.Request, timeout time.Duration) time.Duration {
 }
 
 // create logger with the provided log level
-func createLogger(l string) (logger zerolog.Logger, err error) {
-	var lvl zerolog.Level
+func createLogger(l string) (logger log.Logger, err error) {
+	var lvl log.Level
 	switch l {
 	case "error":
-		lvl = zerolog.ErrorLevel
+		lvl = log.ErrorLevel
 	case "warn":
-		lvl = zerolog.WarnLevel
+		lvl = log.WarnLevel
 	case "info":
-		lvl = zerolog.InfoLevel
+		lvl = log.InfoLevel
 	case "debug":
-		lvl = zerolog.DebugLevel
+		lvl = log.DebugLevel
 	default:
-		return zerolog.Nop(), fmt.Errorf("unrecognized log level: %v", l)
+		return log.Nop(), fmt.Errorf("unrecognized log level: %v", l)
 	}
 
-	zerolog.MessageFieldName = "msg"
-	zerolog.TimestampFieldName = "timestamp"
-	zerolog.TimeFieldFormat = time.RFC3339Nano
+	log.MessageFieldName = "msg"
+	log.TimestampFieldName = "timestamp"
+	log.TimeFieldFormat = time.RFC3339Nano
 
-	zerolog.SetGlobalLevel(lvl)
+	log.SetGlobalLevel(lvl)
 
-	logger = zerolog.New(os.Stdout).With().Timestamp().Logger()
+	logger = log.New(os.Stdout).With().Timestamp().Logger()
 
 	return logger, nil
 }

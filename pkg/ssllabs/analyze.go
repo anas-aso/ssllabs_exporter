@@ -23,7 +23,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/rs/zerolog"
+	log "github.com/rs/zerolog"
 )
 
 // Result a lightweight version of the returned
@@ -53,7 +53,7 @@ type Endpoint struct {
 
 // Analyze executes the SSL test HTTP requests and
 // returns an Result and error (if any)
-func Analyze(ctx context.Context, logger zerolog.Logger, target string) (result Result, err error) {
+func Analyze(ctx context.Context, logger log.Logger, target string) (result Result, err error) {
 	logger.Debug().Str("target", target).Msg("start processing")
 
 	// check cached results and return them if they are "fresh enough"
@@ -108,7 +108,7 @@ func Analyze(ctx context.Context, logger zerolog.Logger, target string) (result 
 // retry API calls until we get a 200 response or the deadline is reached
 // this function is intended to take care of auto retrying when facing network
 // failures, remote server failures and/or rate limiting.
-func analyze(ctx context.Context, logger zerolog.Logger, target string, new bool) (Result, error) {
+func analyze(ctx context.Context, logger log.Logger, target string, new bool) (Result, error) {
 	var result Result
 	deadline, _ := ctx.Deadline()
 	for time.Now().Before(deadline) {
