@@ -21,7 +21,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-kit/kit/log"
+	"github.com/rs/zerolog"
 )
 
 func TestProbeHandler(t *testing.T) {
@@ -39,7 +39,7 @@ func TestProbeHandler(t *testing.T) {
 
 	testRecorder := httptest.NewRecorder()
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		probeHandler(w, r, log.NewNopLogger(), 1, newCache(1, 1))
+		probeHandler(w, r, zerolog.Nop(), 1, newCache(1, 1))
 	})
 
 	handler.ServeHTTP(testRecorder, req)

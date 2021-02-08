@@ -19,16 +19,15 @@ import (
 	"time"
 
 	"github.com/anas-aso/ssllabs_exporter/pkg/ssllabs"
-	"github.com/go-kit/kit/log"
-	"github.com/go-kit/kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/rs/zerolog"
 )
 
 const probeSuccessMetricName = "ssllabs_probe_success"
 
 // Handle runs SSLLabs assessment on the specified target
 // and returns a Prometheus Registry with the results
-func Handle(ctx context.Context, logger log.Logger, target string) prometheus.Gatherer {
+func Handle(ctx context.Context, logger zerolog.Logger, target string) prometheus.Gatherer {
 	var (
 		registry           = prometheus.NewRegistry()
 		probeDurationGauge = prometheus.NewGauge(prometheus.GaugeOpts{
@@ -63,7 +62,7 @@ func Handle(ctx context.Context, logger log.Logger, target string) prometheus.Ga
 	probeDurationGauge.Set(time.Since(start).Seconds())
 
 	if err != nil {
-		level.Error(logger).Log("msg", "assessment failed", "target", target, "error", err)
+		logger.Error().Err(err).Str("target", target).Msg("assessment failed")
 		// set grade to -1 if the assessment failed
 		probeGaugeVec.WithLabelValues("-").Set(-1)
 
