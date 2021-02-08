@@ -24,11 +24,10 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/go-kit/kit/log"
-	"github.com/go-kit/kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	log "github.com/rs/zerolog"
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/anas-aso/ssllabs_exporter/pkg/exporter"
@@ -57,7 +56,7 @@ func probeHandler(w http.ResponseWriter, r *http.Request, logger log.Logger, tim
 	target := r.URL.Query().Get("target")
 	// TODO: add more validation for the target (e.g valid hostname, DNS, etc)
 	if target == "" {
-		level.Error(logger).Log("msg", "Target parameter is missing")
+		logger.Error().Msg("Target parameter is missing")
 		http.Error(w, "Target parameter is missing", http.StatusBadRequest)
 		return
 	}
@@ -66,7 +65,7 @@ func probeHandler(w http.ResponseWriter, r *http.Request, logger log.Logger, tim
 	registry := resultsCache.get(target)
 
 	if registry != nil {
-		level.Debug(logger).Log("msg", "serving results from cache", "target", target)
+		logger.Debug().Str("target", target).Msg("serving results from cache")
 	} else {
 		// if the results do not exist in the cache, trigger a new assessment
 
@@ -104,18 +103,18 @@ func main() {
 
 	timeoutSeconds, err := validateTimeout(*probeTimeout)
 	if err != nil {
-		level.Error(logger).Log("msg", "failed to validate the probe timeout value", "err", err)
+		logger.Error().Err(err).Msg("failed to validate the probe timeout value")
 		os.Exit(1)
 	}
 
 	cacheRetentionDuration, err := time.ParseDuration(*cacheRetention)
 	if err != nil {
-		level.Error(logger).Log("msg", "failed to parse the cache retention value", "err", err)
+		logger.Error().Err(err).Msg("failed to parse the cache retention value")
 		os.Exit(1)
 	}
 	resultsCache := newCache(pruneDelay, cacheRetentionDuration)
 
-	level.Info(logger).Log("msg", "Starting ssllabs_exporter", "version", version)
+	logger.Info().Str("version", version).Msg("Starting ssllabs_exporter")
 
 	promauto.NewGaugeFunc(
 		prometheus.GaugeOpts{
@@ -133,7 +132,7 @@ func main() {
 
 	ssllabsInfo, err := ssllabs.Info()
 	if err != nil {
-		level.Error(logger).Log("msg", "Could not fetch SSLLabs API Info", "err", err)
+		logger.Error().Err(err).Msg("Could not fetch SSLLabs API Info")
 		os.Exit(1)
 	}
 
@@ -167,10 +166,10 @@ func main() {
     </html>`))
 	})
 
-	level.Info(logger).Log("msg", "Listening on address", "address", *listenAddress)
+	logger.Info().Str("address", *listenAddress).Msg("Listening on address")
 
 	if err := http.ListenAndServe(*listenAddress, nil); err != nil {
-		level.Error(logger).Log("msg", "Error starting HTTP server", "err", err)
+		logger.Error().Err(err).Msg("Error starting HTTP server")
 		os.Exit(1)
 	}
 }
@@ -195,23 +194,27 @@ func getTimeout(r *http.Request, timeout time.Duration) time.Duration {
 
 // create logger with the provided log level
 func createLogger(l string) (logger log.Logger, err error) {
-	var lvl level.Option
+	var lvl log.Level
 	switch l {
 	case "error":
-		lvl = level.AllowError()
+		lvl = log.ErrorLevel
 	case "warn":
-		lvl = level.AllowWarn()
+		lvl = log.WarnLevel
 	case "info":
-		lvl = level.AllowInfo()
+		lvl = log.InfoLevel
 	case "debug":
-		lvl = level.AllowDebug()
+		lvl = log.DebugLevel
 	default:
-		return nil, fmt.Errorf("unrecognized log level: %v", l)
+		return log.Nop(), fmt.Errorf("unrecognized log level: %v", l)
 	}
 
-	logger = log.NewJSONLogger(log.NewSyncWriter(os.Stderr))
-	logger = level.NewFilter(logger, lvl)
-	logger = log.With(logger, "timestamp", log.DefaultTimestampUTC)
+	log.MessageFieldName = "msg"
+	log.TimestampFieldName = "timestamp"
+	log.TimeFieldFormat = time.RFC3339Nano
+
+	log.SetGlobalLevel(lvl)
+
+	logger = log.New(os.Stdout).With().Timestamp().Logger()
 
 	return logger, nil
 }

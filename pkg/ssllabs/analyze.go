@@ -23,8 +23,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/go-kit/kit/log"
-	"github.com/go-kit/kit/log/level"
+	log "github.com/rs/zerolog"
 )
 
 // Result a lightweight version of the returned
@@ -55,14 +54,14 @@ type Endpoint struct {
 // Analyze executes the SSL test HTTP requests and
 // returns an Result and error (if any)
 func Analyze(ctx context.Context, logger log.Logger, target string) (result Result, err error) {
-	level.Debug(logger).Log("msg", "start processing", "target", target)
+	logger.Debug().Str("target", target).Msg("start processing")
 
 	// check cached results and return them if they are "fresh enough"
 	// this is mainly useful if the previous context timed out or
 	// canceled before we collected the results
 	result, err = analyze(ctx, logger, target, false)
 	if err != nil {
-		level.Error(logger).Log("msg", "failed to get cached result", "target", target)
+		logger.Error().Err(err).Str("target", target).Msg("failed to get cached result")
 		return
 	}
 
@@ -71,16 +70,16 @@ func Analyze(ctx context.Context, logger log.Logger, target string) (result Resu
 	timeout := deadline.Unix() - time.Now().Unix()
 
 	if result.Status == StatusReady && result.TestTime/1000+timeout >= time.Now().Unix() {
-		level.Debug(logger).Log("msg", "cached result will be used", "target", target)
+		logger.Debug().Str("target", target).Msg("cached result will be used")
 		return
 	}
 
 	// trigger a new assessment if there isn't one in progress
 	if result.Status != StatusDNS && result.Status != StatusInProgress {
-		level.Debug(logger).Log("msg", "triggering a new assessment", "target", target)
+		logger.Debug().Str("target", target).Msg("triggering a new assessment")
 		result, err = analyze(ctx, logger, target, true)
 		if err != nil {
-			level.Error(logger).Log("msg", "failed to trigger a new assessment", "target", target)
+			logger.Error().Err(err).Str("target", target).Msg("failed to trigger a new assessment")
 			return
 		}
 	}
@@ -88,7 +87,7 @@ func Analyze(ctx context.Context, logger log.Logger, target string) (result Resu
 	for {
 		switch {
 		case result.Status == StatusReady:
-			level.Debug(logger).Log("msg", "assessment finished successfully", "target", target)
+			logger.Debug().Str("target", target).Msg("assessment finished successfully")
 			return result, nil
 		case time.Now().After(deadline):
 			result.Status = StatusDeadlineExceeded
@@ -96,10 +95,10 @@ func Analyze(ctx context.Context, logger log.Logger, target string) (result Resu
 		// fetch updates at random intervals
 		default:
 			time.Sleep(time.Duration(10+rand.Intn(10)) * time.Second)
-			level.Debug(logger).Log("msg", "fetching assessment updates", "target", target)
+			logger.Debug().Str("target", target).Msg("fetching assessment updates")
 			result, err = analyze(ctx, logger, target, false)
 			if err != nil {
-				level.Error(logger).Log("msg", "failed to fetch updates", "target", target)
+				logger.Error().Err(err).Str("target", target).Msg("failed to fetch updates")
 				return
 			}
 		}
@@ -125,11 +124,11 @@ func analyze(ctx context.Context, logger log.Logger, target string, new bool) (R
 				return result, fmt.Errorf("the remote server couldn't process the request")
 			case result.Status == StatusHTTPError:
 				coolOff := time.Duration(rand.Intn(10)) * time.Second
-				level.Debug(logger).Log("msg", "sleeping due to HTTP error", "target", target, "duration", coolOff)
+				logger.Debug().Str("target", target).Dur("duration", coolOff).Msg("sleeping due to HTTP error")
 				time.Sleep(coolOff)
 			case result.Status == StatusServerError:
 				coolOff := time.Duration(30+rand.Intn(30)) * time.Second
-				level.Debug(logger).Log("msg", "sleeping due to remote server error", "target", target, "duration", coolOff)
+				logger.Debug().Str("target", target).Dur("duration", coolOff).Msg("sleeping due to remote server error")
 				time.Sleep(coolOff)
 			default:
 				return result, fmt.Errorf("unrecognized status: %v", result.Status)
