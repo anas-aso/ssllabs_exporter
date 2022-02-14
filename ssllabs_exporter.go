@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"runtime"
 	"strconv"
 	"time"
 
@@ -30,6 +29,7 @@ import (
 	log "github.com/rs/zerolog"
 	"gopkg.in/alecthomas/kingpin.v2"
 
+	"github.com/anas-aso/ssllabs_exporter/build"
 	"github.com/anas-aso/ssllabs_exporter/exporter"
 	"github.com/anas-aso/ssllabs_exporter/ssllabs"
 )
@@ -44,12 +44,6 @@ var (
 	logLevel          = kingpin.Flag("log-level", "Printed logs level.").Default("debug").Enum("error", "warn", "info", "debug")
 	cacheRetention    = kingpin.Flag("cache-retention", "Time duration to keep entries in cache such as 30m or 1h5m. Valid duration units are ns, us (or µs), ms, s, m, h.").Default("1h").String()
 	cacheIgnoreFailed = kingpin.Flag("cache-ignore-failed", "Do not cache failed results due to intermittent SSLLabs issues.").Default("False").Bool()
-
-	// build parameters
-	branch    string
-	goversion = runtime.Version()
-	revision  string
-	version   string
 )
 
 func probeHandler(w http.ResponseWriter, r *http.Request, logger log.Logger, timeoutSeconds time.Duration, resultsCache *cache) {
@@ -92,7 +86,7 @@ func probeHandler(w http.ResponseWriter, r *http.Request, logger log.Logger, tim
 }
 
 func main() {
-	kingpin.Version(version)
+	kingpin.Version(build.Version)
 	kingpin.Parse()
 
 	logger, err := createLogger(*logLevel)
@@ -114,17 +108,17 @@ func main() {
 	}
 	resultsCache := newCache(pruneDelay, cacheRetentionDuration)
 
-	logger.Info().Str("version", version).Msg("Starting ssllabs_exporter")
+	logger.Info().Str("version", build.Version).Msg("Starting ssllabs_exporter")
 
 	promauto.NewGaugeFunc(
 		prometheus.GaugeOpts{
 			Name: "ssllabs_exporter",
 			Help: "SSLLabs exporter build parameters",
 			ConstLabels: prometheus.Labels{
-				"branch":    branch,
-				"goversion": goversion,
-				"revision":  revision,
-				"version":   version,
+				"branch":    build.Branch,
+				"goversion": build.GoVersion,
+				"revision":  build.Revision,
+				"version":   build.Version,
 			},
 		},
 		func() float64 { return 1 },
