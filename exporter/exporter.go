@@ -18,7 +18,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/anas-aso/ssllabs_exporter/pkg/ssllabs"
+	"github.com/anas-aso/ssllabs_exporter/ssllabs"
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/rs/zerolog"
 )

@@ -30,8 +30,8 @@ import (
 	log "github.com/rs/zerolog"
 	"gopkg.in/alecthomas/kingpin.v2"
 
-	"github.com/anas-aso/ssllabs_exporter/pkg/exporter"
-	"github.com/anas-aso/ssllabs_exporter/pkg/ssllabs"
+	"github.com/anas-aso/ssllabs_exporter/exporter"
+	"github.com/anas-aso/ssllabs_exporter/ssllabs"
 )
 
 const (

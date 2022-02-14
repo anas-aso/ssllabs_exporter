@@ -17,7 +17,7 @@ package exporter
 import (
 	"testing"
 
-	"github.com/anas-aso/ssllabs_exporter/pkg/ssllabs"
+	"github.com/anas-aso/ssllabs_exporter/ssllabs"
 )
 
 func TestEndpointsLowestGrade(t *testing.T) {
