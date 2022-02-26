@@ -15,7 +15,7 @@
 package exporter
 
 import (
-	"github.com/anas-aso/ssllabs_exporter/pkg/ssllabs"
+	"github.com/anas-aso/ssllabs_exporter/internal/ssllabs"
 )
 
 // Map grades to numerical values as defined in https://github.com/ssllabs/research/wiki/SSL-Server-Rating-Guide#methodology-overview
