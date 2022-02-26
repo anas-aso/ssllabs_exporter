@@ -29,9 +29,9 @@ import (
 	log "github.com/rs/zerolog"
 	"gopkg.in/alecthomas/kingpin.v2"
 
-	"github.com/anas-aso/ssllabs_exporter/build"
-	"github.com/anas-aso/ssllabs_exporter/exporter"
-	"github.com/anas-aso/ssllabs_exporter/ssllabs"
+	"github.com/anas-aso/ssllabs_exporter/internal/build"
+	"github.com/anas-aso/ssllabs_exporter/internal/exporter"
+	"github.com/anas-aso/ssllabs_exporter/internal/ssllabs"
 )
 
 const (
