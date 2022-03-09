@@ -15,7 +15,7 @@
 package exporter
 
 import (
-	"github.com/anas-aso/ssllabs_exporter/internal/ssllabs"
+	ssllabsApi "pkg.re/essentialkaos/sslscan.v13"
 )
 
 // Map grades to numerical values as defined in https://github.com/ssllabs/research/wiki/SSL-Server-Rating-Guide#methodology-overview
@@ -37,7 +37,7 @@ var gradesMapping = map[string]float64{
 }
 
 // convert the returned grade to a number based on https://github.com/ssllabs/research/wiki/SSL-Server-Rating-Guide
-func endpointsLowestGrade(ep []ssllabs.Endpoint) (result string) {
+func endpointsLowestGrade(ep []*ssllabsApi.EndpointInfo) (result string) {
 	if len(ep) == 0 {
 		return
 	}

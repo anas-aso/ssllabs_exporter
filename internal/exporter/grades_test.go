@@ -17,23 +17,23 @@ package exporter
 import (
 	"testing"
 
-	"github.com/anas-aso/ssllabs_exporter/internal/ssllabs"
+	ssllabsApi "pkg.re/essentialkaos/sslscan.v13"
 )
 
 func TestEndpointsLowestGrade(t *testing.T) {
 	var cases = []struct {
 		name           string
-		data           []ssllabs.Endpoint
+		data           []*ssllabsApi.EndpointInfo
 		expectedResult string
 	}{
 		{
 			name:           "result_without_endpoints",
-			data:           []ssllabs.Endpoint{},
+			data:           []*ssllabsApi.EndpointInfo{},
 			expectedResult: "",
 		},
 		{
 			name: "result_with_unreachable_endpoint(s)",
-			data: []ssllabs.Endpoint{
+			data: []*ssllabsApi.EndpointInfo{
 				{
 					StatusMessage: "Unable to connect to the server",
 					Grade:         "",
@@ -43,7 +43,7 @@ func TestEndpointsLowestGrade(t *testing.T) {
 		},
 		{
 			name: "result_with_single_unreachable_endpoint",
-			data: []ssllabs.Endpoint{
+			data: []*ssllabsApi.EndpointInfo{
 				{
 					StatusMessage: "Unable to connect to the server",
 					Grade:         "",
@@ -59,7 +59,7 @@ func TestEndpointsLowestGrade(t *testing.T) {
 		},
 		{
 			name: "single_grade",
-			data: []ssllabs.Endpoint{
+			data: []*ssllabsApi.EndpointInfo{
 				{
 					Grade: "A+",
 				},
@@ -68,7 +68,7 @@ func TestEndpointsLowestGrade(t *testing.T) {
 		},
 		{
 			name: "multiple_grades",
-			data: []ssllabs.Endpoint{
+			data: []*ssllabsApi.EndpointInfo{
 				{
 					Grade: "B",
 				},
@@ -83,7 +83,7 @@ func TestEndpointsLowestGrade(t *testing.T) {
 		},
 		{
 			name: "unknown_grade",
-			data: []ssllabs.Endpoint{
+			data: []*ssllabsApi.EndpointInfo{
 				{
 					Grade: "B",
 				},
