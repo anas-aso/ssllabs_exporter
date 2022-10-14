@@ -20,8 +20,8 @@ import (
 	"math/rand"
 	"time"
 
+	ssllabsApi "github.com/essentialkaos/sslscan/v13"
 	log "github.com/rs/zerolog"
-	ssllabsApi "pkg.re/essentialkaos/sslscan.v13"
 
 	"github.com/anas-aso/ssllabs_exporter/internal/build"
 )
