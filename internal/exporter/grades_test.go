@@ -17,7 +17,7 @@ package exporter
 import (
 	"testing"
 
-	ssllabsApi "pkg.re/essentialkaos/sslscan.v13"
+	ssllabsApi "github.com/essentialkaos/sslscan/v13"
 )
 
 func TestEndpointsLowestGrade(t *testing.T) {

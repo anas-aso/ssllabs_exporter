@@ -15,7 +15,7 @@
 package exporter
 
 import (
-	ssllabsApi "pkg.re/essentialkaos/sslscan.v13"
+	ssllabsApi "github.com/essentialkaos/sslscan/v13"
 )
 
 // Map grades to numerical values as defined in https://github.com/ssllabs/research/wiki/SSL-Server-Rating-Guide#methodology-overview
