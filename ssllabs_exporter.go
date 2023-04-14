@@ -23,11 +23,11 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/rs/zerolog"
-	"gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/anas-aso/ssllabs_exporter/internal/build"
 	"github.com/anas-aso/ssllabs_exporter/internal/exporter"
