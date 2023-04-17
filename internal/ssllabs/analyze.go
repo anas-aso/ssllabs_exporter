@@ -30,6 +30,9 @@ var api *ssllabsApi.API
 
 func init() {
 	api, _ = ssllabsApi.NewAPI("ssllabs-exporter", build.Version)
+	if api == nil {
+		panic("failed to initialize API client. this should never happen!")
+	}
 }
 
 // Analyze executes the SSL test HTTP requests

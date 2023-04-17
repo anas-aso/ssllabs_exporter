@@ -21,7 +21,7 @@ RUN export VERSION=$(cat version) && \
     export BRANCH=$(cat branch) && \
     export REVISION=$(cat revision) && \
     CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo \
-    -ldflags="-w -s -X github.com/anas-aso/ssllabs_exporter/build.Branch=${BRANCH} -X github.com/anas-aso/ssllabs_exporter/build.Revision=${REVISION} -X github.com/anas-aso/ssllabs_exporter/build.Version=${VERSION}" \
+    -ldflags="-w -s -X github.com/anas-aso/ssllabs_exporter/internal/build.Branch=${BRANCH} -X github.com/anas-aso/ssllabs_exporter/internal/build.Revision=${REVISION} -X github.com/anas-aso/ssllabs_exporter/internal/build.Version=${VERSION}" \
     -o /workdir/ssllabs_exporter
 
 # Create a "nobody" user for the next image

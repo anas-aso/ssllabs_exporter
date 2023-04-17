@@ -4,8 +4,8 @@ import "runtime"
 
 // build parameters
 var (
-	Branch    string
+	Branch    = "dev"
 	GoVersion = runtime.Version()
-	Revision  string
-	Version   string
+	Revision  = "n/a"
+	Version   = "n/a"
 )
