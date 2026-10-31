@@ -39,9 +39,13 @@ Flags:
 ```
 
 ## Docker
-The Prometheus exporter is available as a [docker image](https://hub.docker.com/repository/docker/anasaso/ssllabs_exporter) :
+The Prometheus exporter is available as a [docker image](https://hub.docker.com/r/anasaso/ssllabs_exporter) :
 ```
 docker run --rm -it anasaso/ssllabs_exporter:latest --help
+```
+Images are published for `linux/amd64` and `linux/arm64`. To build a multi-platform image yourself :
+```
+docker buildx build --platform linux/amd64,linux/arm64 -t ssllabs_exporter .
 ```
 
 ## How To Use it
