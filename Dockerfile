@@ -1,4 +1,8 @@
-FROM golang:1.24-alpine3.21 AS builder
+# Build natively and cross compile for the requested target platform
+FROM --platform=$BUILDPLATFORM golang:1.27-alpine AS builder
+
+ARG TARGETOS=linux
+ARG TARGETARCH
 
 RUN apk update && \
     apk upgrade && \
@@ -20,7 +24,7 @@ RUN git rev-parse --abbrev-ref HEAD > branch
 RUN export VERSION=$(cat version) && \
     export BRANCH=$(cat branch) && \
     export REVISION=$(cat revision) && \
-    CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo \
+    CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -a -installsuffix cgo \
     -ldflags="-w -s -X github.com/anas-aso/ssllabs_exporter/internal/build.Branch=${BRANCH} -X github.com/anas-aso/ssllabs_exporter/internal/build.Revision=${REVISION} -X github.com/anas-aso/ssllabs_exporter/internal/build.Version=${VERSION}" \
     -o /workdir/ssllabs_exporter
 
