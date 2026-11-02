@@ -14,10 +14,7 @@
 
 package ssllabs
 
-import (
-	"reflect"
-	"testing"
-)
+import "testing"
 
 func TestInfo(t *testing.T) {
 	info, err := Info()
@@ -25,14 +22,8 @@ func TestInfo(t *testing.T) {
 		t.Errorf("\nerror fetching SSLLabs API info: %v", err)
 	}
 
-	expectedInfo := APIInfo{
-		EngineVersion:      "2.3.1",
-		CriteriaVersion:    "2009q",
-		MaxAssessments:     25,
-		CurrentAssessments: 0,
-	}
-
-	if !reflect.DeepEqual(expectedInfo, info) {
-		t.Errorf("\nexpected info: %v\nreturned info: %v", expectedInfo, info)
+	// the live API values change over time, so only check that they are populated
+	if info.EngineVersion == "" || info.CriteriaVersion == "" || info.MaxAssessments == 0 {
+		t.Errorf("\nunexpected empty fields in returned info: %v", info)
 	}
 }

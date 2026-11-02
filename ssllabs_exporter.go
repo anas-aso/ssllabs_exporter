@@ -124,10 +124,17 @@ func main() {
 		func() float64 { return 1 },
 	)
 
+	logger.Info().Msg("Use of the SSL Labs API is subject to the SSL Labs Terms of Use: https://www.ssllabs.com/downloads/Qualys_SSL_Labs_Terms_of_Use.pdf")
+	logger.Info().Msg("This exporter sends assessment requests to remote SSL Labs servers and your information will be shared with them. Only assess servers you have permission to test.")
+
 	ssllabsInfo, err := ssllabs.Info()
 	if err != nil {
 		logger.Error().Err(err).Msg("Could not fetch SSLLabs API Info")
 		os.Exit(1)
+	}
+
+	for _, message := range ssllabsInfo.Messages {
+		logger.Info().Str("source", "ssllabs").Msg(message)
 	}
 
 	promauto.NewGaugeFunc(
@@ -136,7 +143,7 @@ func main() {
 			Help: "SSLLabs API engine and criteria versions",
 			ConstLabels: prometheus.Labels{
 				"engine":   ssllabsInfo.EngineVersion,
-				"criteria": ssllabsInfo.EngineVersion,
+				"criteria": ssllabsInfo.CriteriaVersion,
 			},
 		},
 		func() float64 { return 1 },

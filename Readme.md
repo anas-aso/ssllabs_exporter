@@ -14,6 +14,14 @@ source: https://www.ssllabs.com/about/assessment.html
 
 This exporter implements SSLLabs API client that would get you the same results as if you use the [web interface](https://www.ssllabs.com/ssltest/).
 
+## Terms of Use
+Use of the SSLLabs API is subject to the [SSL Labs Terms of Use](https://www.ssllabs.com/downloads/Qualys_SSL_Labs_Terms_of_Use.pdf). In particular:
+- This exporter works by sending assessment requests to remote SSL Labs servers, and the information you submit (e.g. hostnames, your IP address) is shared with SSL Labs.
+- Only assess sites and servers whose owners have given you permission.
+- Commercial use, use on a public web site, publishing results without the owner's permission, and making the API available to others require SSL Labs' express permission.
+- Messages returned by the SSL Labs `info` API are logged on startup.
+- This project is not affiliated with or officially supported by SSL Labs or Qualys.
+
 ## Configuration
 ssllabs_exporter doesn't require any configuration file and the available flags can be found as below :
 ```bash

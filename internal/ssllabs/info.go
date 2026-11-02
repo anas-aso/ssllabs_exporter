@@ -27,6 +27,8 @@ type APIInfo struct {
 	CriteriaVersion    string `json:"criteriaVersion"`
 	MaxAssessments     int    `json:"maxAssessments"`
 	CurrentAssessments int    `json:"currentAssessments"`
+	// Messages are notices from SSL Labs that must be shown to the user.
+	Messages []string `json:"messages"`
 }
 
 // Info calls /info endpoint and returns and Info
