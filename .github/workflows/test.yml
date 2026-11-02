@@ -5,12 +5,12 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
     - name: Install Go
       uses: actions/setup-go@v5
       with:
         go-version-file: go.mod
-    - name: Checkout code
-      uses: actions/checkout@v4
     - id: go-cache-paths
       run: |
         echo "go-build=$(go env GOCACHE)" >> $GITHUB_OUTPUT
